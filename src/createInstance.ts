@@ -22,14 +22,12 @@ export async function saveEntityDomain(entityId: string, entityDomain: EntityDom
 // Function to fulfill the Logic of Reality for a new user
 export const createInstance = async (
   userId: string,
-  rationale: string,
   location: { x: number; y: number; z: number }
 ) => {
   const instanceRef = doc(db, "0001_instances", userId);
   await setDoc(instanceRef, {
     thread: "0001",
     status: "CONNECTED", // Fulfills 0011
-    rationale,
     timestamp: serverTimestamp(), // Represents 'TIME' from your 4D concept
     location,
   });

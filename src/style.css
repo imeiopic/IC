@@ -117,6 +117,17 @@ code {
   }
 }
 
+
+/* Fast animation for Proximity (1000) */
+@keyframes proximityPulse {
+  0% { border-color: rgba(0, 255, 255, 0.4); }
+  50% { border-color: rgba(255, 215, 0, 1.0); } /* Transition to Gold for OrderTaker */
+  100% { border-color: rgba(0, 255, 255, 0.4); }
+}
+
+.proximity-alert {
+  animation: proximityPulse 0.5s infinite linear;
+}
 .hero {
   position: relative;
 

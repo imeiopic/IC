@@ -6,6 +6,7 @@
 </template>
 
 <script setup lang="ts">
+// @ts-ignore
 import imgSrc from '../assets/0001.png'
 </script>
 

@@ -1,5 +1,6 @@
 <template>
   <div class="login-container">
+    <img src="../assets/images/iologo.png" alt="IOPIC Logo" style="display:block;margin:0 auto 1.5rem auto;width:90px;" />
     <h2>Login</h2>
     <form @submit.prevent="login">
       <div>
@@ -11,24 +12,37 @@
         <input type="password" v-model="password" required />
       </div>
       <button type="submit">Login</button>
-      <button type="button" class="google-btn" @click="googleSignup">Sign up with Google</button>
       <div v-if="error" class="error">{{ error }}</div>
     </form>
     
+    <div class="google-container" style="margin-top: 2rem; text-align: center;">
+        <div style="margin-bottom: 0.5rem; font-weight: 500;">Log in with Google</div>
+        <button type="button" class="google-btn" @click="googleSignup" style="margin-bottom: 1rem;display:flex;align-items:center;justify-content:center;gap:0.5rem;">
+          <img src="../assets/images/google.png" alt="Google" style="width:20px;height:20px;vertical-align:middle;" />
+          Log in with Google
+        </button>
+        <div style="margin-bottom: 0.5rem; font-weight: 500;">Sign up with Google</div>
+        <button type="button" class="google-btn" @click="googleSignup" style="display:flex;align-items:center;justify-content:center;gap:0.5rem;">
+          <img src="../assets/images/google.png" alt="Google" style="width:20px;height:20px;vertical-align:middle;" />
+          Sign up with Google
+        </button>
+      </div>
   </div>
 </template>
 
 <script setup lang="ts">
 /// <reference path="../firebase.js.d.ts" />
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { getAuth, signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth'
+const router = useRouter()
 const googleSignup = async () => {
   error.value = ''
   try {
     const auth = getAuth(app)
     const provider = new GoogleAuthProvider()
     await signInWithPopup(auth, provider)
-    alert('Google signup successful!')
+    router.push({ name: 'MyWorld' })
   } catch (e: any) {
     error.value = e.message
   }
@@ -44,8 +58,7 @@ const login = async () => {
   try {
     const auth = getAuth(app)
     await signInWithEmailAndPassword(auth, email.value, password.value)
-    // Redirect or show success message here
-    alert('Login successful!')
+    router.push({ name: 'MyWorld' })
   } catch (e: any) {
     error.value = e.message
   }

@@ -1,15 +1,14 @@
 <template>
   <button class="img-btn">
-    <img :src="imgSrc" alt="Order Taker" />
+    <img src="../assets/0000.png" alt="Order Taker" />
     <span>Order Taker</span>
   </button>
 </template>
 
+
 <script setup lang="ts">
-import imgSrc from '../assets/0000.png'
 </script>
 
-export default {};
 
 <style scoped>
 .img-btn {

@@ -1,5 +1,6 @@
 <template>
   <div class="signup-container">
+    <img src="../assets/images/iologo.png" alt="IOPIC Logo" style="display:block;margin:0 auto 1.5rem auto;width:90px;" />
     <h2>Sign Up</h2>
     <form @submit.prevent="signup">
       <div>
@@ -9,10 +10,6 @@
       <div>
         <label for="password">Password:</label>
         <input type="password" v-model="password" required />
-      </div>
-      <div>
-        <label for="rationale">Why are you joining?</label>
-        <textarea v-model="rationale" required placeholder="Share your rationale..."></textarea>
       </div>
       <button type="submit" :disabled="loading">Sign Up</button>
       <button type="button" class="google-btn" @click="googleSignup">Sign up with Google</button>
@@ -45,7 +42,6 @@ import app from '../firebase.js'
 
 const email = ref('')
 const password = ref('')
-const rationale = ref('')
 const error = ref('')
 const success = ref('')
 const loading = ref(false)
@@ -57,25 +53,24 @@ async function registerViaFirebase(email: string, password: string) {
 }
 
 // Onboarding logic: Initiate user genesis
-async function initiateUserGenesis(email: string, password: string, rationale: string, lat: number, lon: number) {
+async function initiateUserGenesis(email: string, password: string, lat: number, lon: number) {
   // 1. Authenticate (The Internet I)
   const userCredential = await registerViaFirebase(email, password)
   // 2. Define the Instance (The People P)
-  await createInstance(userCredential.user.uid, rationale, {
-    x: lat,
-    y: lon,
-    z: 0 // Surface of Earth
-  })
+  await createInstance(
+    userCredential.user.uid,
+    {
+      x: lat,
+      y: lon,
+      z: 0 // Surface of Earth
+    }
+  )
   console.log("iiii = ! : The User has entered the Fabric.")
 }
 
 const signup = async () => {
   error.value = ''
   success.value = ''
-  if (!rationale.value.trim()) {
-    error.value = 'Please share your rationale.'
-    return
-  }
   loading.value = true
   // Get geolocation
   if (!navigator.geolocation) {
@@ -88,7 +83,6 @@ const signup = async () => {
       await initiateUserGenesis(
         email.value,
         password.value,
-        rationale.value,
         position.coords.latitude,
         position.coords.longitude
       )

@@ -1,4 +1,3 @@
-
 <template>
   <div class="homepage">
     <h1>Welcome to the IOPIC.WORLD</h1>
@@ -12,19 +11,26 @@
       <span class="divider">or</span>
       <router-link to="/signup" class="auth-link">Sign Up</router-link>
     </div>
+    <div style="margin-top:2rem; display: flex; flex-direction: column; align-items: center; gap: 1rem;">
+      <router-link to="/about" class="about-link">About</router-link>
+      <router-link to="/connections" class="connections-link" style="display:inline-block;">
+        <img src="../assets/images/myworld.png" alt="My World" style="width:160px; height:160; object-fit:contain; display:block; margin:0 auto;" />
+        <span style="display:block; text-align:center; color:#fff; margin-top:0.5rem;">My World</span>
+      </router-link>
+    </div>
+    <!-- Removed QR code for myIdentifier: not defined in this component -->
   </div>
 </template>
 
 <script lang="ts">
 import { defineComponent } from 'vue';
 import { useRouter } from 'vue-router';
-
 export default defineComponent({
   name: 'Homepage',
   setup() {
     const router = useRouter();
     const onEnter = () => {
-      router.push('/instancehome');
+      router.push('/myworld');
     };
     return { onEnter };
   }
@@ -100,3 +106,5 @@ export default defineComponent({
     opacity: 0.7;
   }
 </style>
+
+<link rel="preload" as="doc" href="https://docs.google.com/document/d/e/2PACX-1vQQUrr7_lYbk-K5KHV3rizHPhCi_Ovxujgx3g2PLyvhg8ciFkC7x4mr7X0YnJl-T4beHy2PcTAbAxmL/pub?embedded=true" />

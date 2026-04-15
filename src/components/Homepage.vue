@@ -63,7 +63,7 @@ export default defineComponent({
     max-width: 90vw;
     border-radius: 12px;
     margin-bottom: 2rem;
-    margin-top: 4rem;
+    margin-top: 1rem;
     box-shadow: 0 4px 24px #0004;
   }
   .enter-btn {

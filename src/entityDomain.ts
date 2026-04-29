@@ -14,7 +14,7 @@ export const entityDomain: EntityDomain = {
   binary_id: "0110",
   type: "BUSINESS", // Or Country, Club, etc.
   name: "Global Exchange Entity",
-  members: ["User_A_ID", "User_B_ID"], // The people inside the entity
+  members: ["Member_A_ID", "Member_B_ID"], // The people inside the entity
   gatekeeper_rules: "1000_STANDARD",
   status: "ACTIVE_DOMAIN"
 };

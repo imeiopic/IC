@@ -1,0 +1,77 @@
+name: Terraform Infrastructure Deploy
+
+on:
+  push:
+    branches:
+      - main
+      - staging
+  pull_request:
+    branches:
+      - main
+      - staging
+
+jobs:
+  terraform:
+    name: "Terraform Plan & Apply"
+    runs-on: ubuntu-latest
+
+    # Dynamically select the GitHub Environment based on the branch
+    environment: ${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}
+
+    permissions:
+      contents: read
+      id-token: write # Required for AWS OIDC authentication
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ vars.AWS_REGION || 'us-east-1' }}
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: "projects/859589499177/locations/global/workloadIdentityPools/github-actions-pool/providers/github-provider"
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Format
+        id: fmt
+        run: terraform fmt -check
+        continue-on-error: true
+
+      - name: Terraform Init
+        id: init
+        run: terraform init
+        continue-on-error: true
+
+      - name: Terraform Validate
+        id: validate
+        run: terraform validate -no-color > validate.txt 2>&1
+        continue-on-error: true
+
+      - name: Select or Create Terraform Workspace
+        id: workspace
+        # Map the 'main' branch to the 'production' workspace, and 'staging' to 'staging'
+        env:
+          WORKSPACE: ${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}
+        run: |
+          terraform workspace select $WORKSPACE || terraform workspace new $WORKSPACE
+
+      - name: Terraform Plan
+        env:
+          WORKSPACE: ${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}
+        run: terraform plan -var-file="${WORKSPACE}.tfvars" -out=tfplan
+
+      - name: Terraform Apply
+        # Only automatically apply when code is pushed/merged, NOT on pull requests
+        if: github.event_name == 'push'
+        env:
+          WORKSPACE: ${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}
+        run: terraform apply -auto-approve tfplan

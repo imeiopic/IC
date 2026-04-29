@@ -1,0 +1,85 @@
+name: PR Checks
+
+on:
+  pull_request:
+    branches:
+      - main
+  # Triggers when a PR is added to the GitHub Merge Queue
+  merge_group:
+
+# Cancels previous runs for the same PR if new commits are pushed
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    name: Build and Test
+    runs-on: ubuntu-latest
+
+    # Grant permissions needed to commit and push changes back to the PR branch
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Setup Java (Required for Firebase Emulators)
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "17"
+
+      - name: Cache Firebase Emulators
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/firebase/emulators
+          # We hash the package-lock.json so the cache busts if you update the firebase-tools version
+          key: ${{ runner.os }}-firebase-emulators-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-firebase-emulators-
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Auto-fix ESLint Errors
+        # Runs ESLint with the --fix flag. We use continue-on-error so the workflow
+        # doesn't stop here if there are errors that cannot be fixed automatically.
+        run: npx eslint . --fix
+        continue-on-error: true
+
+      - name: Auto-format with Prettier
+        # Runs Prettier to automatically format your code
+        run: npx prettier --write .
+
+      - name: Commit Lint and Format Fixes
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "style: auto-fix linting and formatting"
+
+      - name: Verify ESLint (Fail if unfixable errors remain)
+        # Run ESLint again without --fix to fail the job if manual fixes are required
+        run: npx eslint .
+
+      - name: Type Check and Build
+        # Runs 'vue-tsc --noEmit && vite build' as defined in your package.json
+        run: npm run build
+
+      - name: Run Unit Tests with Coverage
+        # Executes your Vue component tests and generates the json-summary
+        run: npm run test:coverage
+
+      - name: Report Coverage to PR
+        uses: davelosert/vitest-coverage-report-action@v2
+
+      - name: Run Firebase Emulator Tests
+        # Runs your mocha tests against the local Firestore/Auth emulators
+        run: npm run test:rules

@@ -1,0 +1,175 @@
+name: Automated PR Tests
+
+on:
+  pull_request:
+    branches:
+      - main
+      - staging
+
+jobs:
+  test-rules:
+    name: Run Emulator Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Setup Java (Required for Firebase Emulators)
+        uses: actions/setup-java@v4
+        with:
+          java-version: "17"
+          distribution: "temurin"
+
+      - name: Install Firebase CLI
+        run: npm install -g firebase-tools
+
+      - name: Install Project Dependencies
+        run: npm ci
+
+      - name: Run Storage and Firestore Rules Tests
+        run: npm run test:rules
+
+      - name: Upload Coverage Reports
+        uses: actions/upload-artifact@v4
+        if: always() # Ensure they upload even if the tests fail!
+        with:
+          name: firebase-rules-coverage
+          path: coverage/
+
+  test-frontend:
+    name: Run Frontend Unit Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install Project Dependencies
+        run: npm ci
+
+      - name: Run Vue Unit Tests with Coverage
+        run: npm run test:coverage
+
+      - name: Enforce Coverage Baseline
+        if: github.event_name == 'pull_request'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "🔍 Fetching baseline coverage from main branch..."
+
+          # Find the ID of the last successful run on the main branch
+          RUN_ID=$(gh run list --branch main --status success --limit 1 --json databaseId --jq '.[0].databaseId')
+
+          if [ -z "$RUN_ID" ] || [ "$RUN_ID" == "null" ]; then
+            echo "⚠️ No successful runs found on main. Skipping comparison."
+            exit 0
+          fi
+
+          # Download the artifact from that run into a temp directory
+          gh run download $RUN_ID --name vue-frontend-coverage --dir base-coverage || true
+
+          if [ ! -f "base-coverage/coverage-summary.json" ]; then
+            echo "⚠️ Base coverage summary not found. Skipping comparison."
+            exit 0
+          fi
+
+          # Extract the line coverage percentages using jq
+          BASE_COV=$(jq -r '.total.lines.pct' base-coverage/coverage-summary.json)
+          NEW_COV=$(jq -r '.total.lines.pct' coverage/coverage-summary.json)
+
+          echo "Main Branch Coverage: $BASE_COV%"
+          echo "PR Branch Coverage: $NEW_COV%"
+
+          # Use awk to compare floating point numbers
+          if awk "BEGIN { if ($NEW_COV < $BASE_COV) exit 0; else exit 1 }"; then
+            echo "❌ Coverage dropped from $BASE_COV% to $NEW_COV%!"
+            exit 1
+          else
+            echo "✅ Coverage maintained or increased!"
+          fi
+
+      - name: Upload Frontend Coverage Report
+        uses: actions/upload-artifact@v4
+        if: always() # Ensure the report uploads even if a test fails
+        with:
+          name: vue-frontend-coverage
+          path: coverage/
+
+  test-backend:
+    name: Run Backend Unit Tests
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      pull-requests: write # Required to post PR comments
+      actions: read # Required to download baseline artifacts via GitHub CLI
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install Project Dependencies
+        run: npm ci
+
+      - name: Run Backend Unit Tests with Coverage
+        run: npm run test:backend:coverage
+
+      - name: Enforce Coverage Baseline
+        if: github.event_name == 'pull_request'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "🔍 Fetching baseline coverage from main branch..."
+
+          RUN_ID=$(gh run list --branch main --status success --limit 1 --json databaseId --jq '.[0].databaseId')
+
+          if [ -z "$RUN_ID" ] || [ "$RUN_ID" == "null" ]; then
+            echo "⚠️ No successful runs found on main. Skipping comparison."
+            exit 0
+          fi
+
+          gh run download $RUN_ID --name backend-coverage --dir base-coverage || true
+
+          if [ ! -f "base-coverage/coverage-summary.json" ]; then
+            echo "⚠️ Base coverage summary not found. Skipping comparison."
+            exit 0
+          fi
+
+          BASE_COV=$(jq -r '.total.lines.pct' base-coverage/coverage-summary.json)
+          NEW_COV=$(jq -r '.total.lines.pct' coverage/coverage-summary.json)
+
+          echo "Main Branch Coverage: $BASE_COV%"
+          echo "PR Branch Coverage: $NEW_COV%"
+
+          if awk "BEGIN { if ($NEW_COV < $BASE_COV) exit 0; else exit 1 }"; then
+            echo "❌ Coverage dropped from $BASE_COV% to $NEW_COV%!"
+            exit 1
+          else
+            echo "✅ Coverage maintained or increased!"
+          fi
+
+      - name: Upload Backend Coverage Report
+        uses: actions/upload-artifact@v4
+        if: always() # Ensure the report uploads even if a test fails
+        with:
+          name: backend-coverage
+          path: coverage/

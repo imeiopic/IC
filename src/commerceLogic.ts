@@ -8,8 +8,8 @@ export interface CommerceLogic {
 }
 
 export const commerceLogic: CommerceLogic = {
-  seller_id: "User_A_0110", // The Male Instance
-  buyer_id: "User_B_0110",  // The Female Instance
+  seller_id: "Member_A_0110", // The Male Instance
+  buyer_id: "Member_B_0110",  // The Female Instance
   rational_reason: "Value Exchange",
   status: "0011_CONNECTED",
   earth_location: "1101_LAT_LONG",

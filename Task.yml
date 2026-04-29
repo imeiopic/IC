@@ -1,0 +1,11 @@
+name: Task
+description: "Represents a user task or to-do item"
+fields:
+  - name: title
+    type: string
+    required: true
+  - name: isCompleted
+    type: bool
+  - name: project
+    type: one
+    target: Project # This links the Task to the Project entity

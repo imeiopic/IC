@@ -1,8 +1,8 @@
 
 <template>
   <button class="img-btn" @click="$emit('click')">
-    <img :src="imgSrc" alt="My People" />
-    <span>My People</span>
+    <img :src="imgSrc" alt="People" />
+    <span>People</span>
   </button>
 </template>
 

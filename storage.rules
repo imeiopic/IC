@@ -1,0 +1,42 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isSelf(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.admin == true;
+    }
+
+    function isValidUpload() {
+      // Example: Restrict to images and PDFs under 5MB
+      let isAllowedType = request.resource.contentType.matches('image/.*') || 
+                          request.resource.contentType == 'application/pdf';
+      let isUnderSizeLimit = request.resource.size < 5 * 1024 * 1024; // 5 MB
+      
+      return isAllowedType && isUnderSizeLimit;
+    }
+
+    // Restrict access to specific routing folders under the user's UID
+    match /users/{userId} {
+      // 1. Completely private folder (only the owner can read or write)
+      match /private/{allPaths=**} {
+        allow read, delete: if isSelf(userId) || isAdmin();
+        allow create, update: if isSelf(userId) && isValidUpload();
+      }
+
+      // 2. Public folder (readable by anyone signed in, writable by owner)
+      match /public/{allPaths=**} {
+        allow read: if isSignedIn();
+        allow delete: if isSelf(userId) || isAdmin();
+        allow create, update: if isSelf(userId) && isValidUpload();
+      }
+    }
+  }
+}

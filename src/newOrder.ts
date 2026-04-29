@@ -12,9 +12,9 @@ export interface NewOrder {
 
 export const newOrder: NewOrder = {
   origin_thread: "1000",
-  creator_id: "User_A_0110",
+  creator_id: "Member_A_0110",
   rational_choice: "1001_COMMERCE", // The choice made in the menu
-  target_id: "User_B_0110", // The "Pair" in the VR^2 equation
+  target_id: "Member_B_0110", // The "Pair" in the VR^2 equation
   order_status: "PENDING_LOGIC",
   timestamp: serverTimestamp()
 };

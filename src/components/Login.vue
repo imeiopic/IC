@@ -1,124 +1,56 @@
 <template>
-  <div class="login-container">
-    <img src="../assets/images/iologo.png" alt="IOPIC Logo" style="display:block;margin:0 auto 1.5rem auto;width:90px;" />
-    <h2>Login</h2>
-    <form @submit.prevent="login">
-      <div>
-        <label for="email">Email:</label>
-        <input type="email" v-model="email" required />
+  <div class="login-page">
+    <div class="login-card">
+      <h3>Admin Login</h3>
+      <p class="text-muted">Logging in as: <strong>{{ username }}</strong></p>
+      <div class="mb-3">
+        <label for="password" class="form-label">Password</label>
+        <input type="password" id="password" v-model="password" class="form-control" @keyup.enter="handleLogin" placeholder="Enter your password" />
       </div>
-      <div>
-        <label for="password">Password:</label>
-        <input type="password" v-model="password" required />
-      </div>
-      <button type="submit">Login</button>
-      <div v-if="error" class="error">{{ error }}</div>
-    </form>
-    
-    <div class="google-container" style="margin-top: 2rem; text-align: center;">
-        <div style="margin-bottom: 0.5rem; font-weight: 500;">Log in with Google</div>
-        <button type="button" class="google-btn" @click="googleSignup" style="margin-bottom: 1rem;display:flex;align-items:center;justify-content:center;gap:0.5rem;">
-          <img src="../assets/images/google.png" alt="Google" style="width:20px;height:20px;vertical-align:middle;" />
-          Log in with Google
-        </button>
-        <div style="margin-bottom: 0.5rem; font-weight: 500;">Sign up with Google</div>
-        <button type="button" class="google-btn" @click="googleSignup" style="display:flex;align-items:center;justify-content:center;gap:0.5rem;">
-          <img src="../assets/images/google.png" alt="Google" style="width:20px;height:20px;vertical-align:middle;" />
-          Sign up with Google
-        </button>
-      </div>
+      <button @click="handleLogin" class="btn btn-primary w-100">Login</button>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-/// <reference path="../firebase.js.d.ts" />
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
-import { getAuth, signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth'
-const router = useRouter()
-const googleSignup = async () => {
-  error.value = ''
-  try {
-    const auth = getAuth(app)
-    const provider = new GoogleAuthProvider()
-    await signInWithPopup(auth, provider)
-    router.push({ name: 'MyWorld' })
-  } catch (e: any) {
-    error.value = e.message
-  }
-}
-import app from '../firebase.js'
+import { ref, onMounted } from 'vue';
+import { useRouter, useRoute } from 'vue-router';
 
-const email = ref('')
-const password = ref('')
-const error = ref('')
+const router = useRouter();
+const route = useRoute();
+const username = ref('');
+const password = ref('');
 
-const login = async () => {
-  error.value = ''
-  try {
-    const auth = getAuth(app)
-    await signInWithEmailAndPassword(auth, email.value, password.value)
-    router.push({ name: 'MyWorld' })
-  } catch (e: any) {
-    error.value = e.message
+onMounted(() => {
+  // Retrieve the username passed from the Homepage
+  username.value = (route.query.user as string) || 'Ime Iopic';
+});
+
+function handleLogin() {
+  // Mock authentication logic
+  // If the user is Ime Iopic, send him to the Admin Dashboard
+  if (username.value.toLowerCase() === 'ime iopic') {
+    router.push('/ime-admin');
+  } else {
+    // Default fallback for other users
+    router.push('/myworld');
   }
 }
 </script>
 
 <style scoped>
-.login-background {
-  background-image: url();
-  background-size: cover;
-  background-position: center;
-  min-height: 100vh;
-  width: 100vw;
+.login-page {
   display: flex;
-  align-items: center;
   justify-content: center;
+  align-items: center;
+  height: 80vh;
 }
-.login-container {
-  max-width: 400px;
-  margin: 2rem auto;
-  padding: 2rem;
-  border: 1px solid #ccc;
-  border-radius: 8px;
+.login-card {
   background: #fff;
-}
-label {
-  display: block;
-  margin-bottom: 0.5rem;
-}
-input {
+  padding: 2rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
   width: 100%;
-  padding: 0.5rem;
-  margin-bottom: 1rem;
-  border: 1px solid #ccc;
-  border-radius: 4px;
+  max-width: 400px;
 }
-button {
-  width: 100%;
-  padding: 0.75rem;
-  background: #42b983;
-  color: #fff;
-  border: none;
-  border-radius: 4px;
-  font-size: 1rem;
-  cursor: pointer;
-}
-.error {
-  color: red;
-  margin-top: 1rem;
-}
-.google-btn {
-  width: 100%;
-  padding: 0.75rem;
-  background: #4285f4;
-  color: #fff;
-  border: none;
-  border-radius: 4px;
-  font-size: 1rem;
-  cursor: pointer;
-  margin-top: 1rem;
-}
-
 </style>

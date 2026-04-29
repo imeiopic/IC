@@ -1,0 +1,40 @@
+%% IO Law & Order for IoT - Architecture Diagram
+flowchart TD
+    subgraph Identity & Access
+      A1[Device/User Registration]
+      A2[Authentication]
+      A3[Access Control Policy]
+    end
+    subgraph Policy & Enforcement
+      B1[Policy Engine (Cloud Function/Smart Contract)]
+      B2[Rule/Contract Store]
+    end
+    subgraph Audit & Trace
+      C1[Action Logger (Firestore/Blockchain)]
+      C2[Audit Dashboard (Vue)]
+    end
+    subgraph Monitoring & Alerts
+      D1[Real-Time Monitor]
+      D2[Anomaly Detector]
+      D3[Alert/Notification Service]
+    end
+    subgraph Dispute & Recovery
+      E1[Dispute Handler]
+      E2[Recovery Workflow]
+    end
+    A1 --> A2 --> A3 --> B1
+    B1 --> C1
+    B2 --> B1
+    C1 --> C2
+    D1 --> D2 --> D3
+    D1 --> C1
+    D3 --> E1
+    E1 --> E2
+    C2 --> E1
+    A3 --> D1
+    B1 --> D1
+    style A1 fill:#0ff,stroke:#222
+    style B1 fill:#ffd700,stroke:#222
+    style C1 fill:#0f0,stroke:#222
+    style D1 fill:#f00,stroke:#222
+    style E1 fill:#800080,stroke:#222

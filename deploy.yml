@@ -1,0 +1,60 @@
+name: Build and Deploy Protocol
+
+on:
+  push:
+    branches:
+      - main
+      - staging
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    name: Build and Deploy Protocol
+    # This allows both pushes to key branches and Pull Requests to run.
+    # Pull Requests will deploy to a temporary preview channel.
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
+
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}
+      # This URL will show up in your GitHub PRs and environments page
+      url: ${{ steps.deploy.outputs.details_url }}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build Project
+        # Map GitHub Secrets to Environment Variables for Vite
+        # These will now pull from the environment selected above!
+        env:
+          VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
+          VITE_FIREBASE_AUTH_DOMAIN: ${{ vars.FIREBASE_AUTH_DOMAIN }}
+          VITE_FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID }}
+          VITE_FIREBASE_STORAGE_BUCKET: ${{ vars.FIREBASE_STORAGE_BUCKET }}
+          VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ vars.FIREBASE_MESSAGING_SENDER_ID }}
+          VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
+          VITE_FIREBASE_MEASUREMENT_ID: ${{ vars.FIREBASE_MEASUREMENT_ID }}
+        run: npm run build -- --mode ${{ vars.VITE_MODE || 'production' }}
+
+      - name: Deploy to Firebase Hosting
+        id: deploy
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: '${{ secrets.GITHUB_TOKEN }}'
+          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}'
+          channelId: ${{ github.event_name == 'push' && 'live' || '' }}
+          projectId: ${{ vars.FIREBASE_PROJECT_ID }}

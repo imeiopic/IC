@@ -1,0 +1,18 @@
+{{#if isApproved}}
+    <h2 style="color: #5cb85c;">Access Request Approved</h2>
+    <p>Greetings,</p>
+    <p>Your request for elevated clearance on the Iopic identity substrate has been processed successfully.</p>
+    <hr>
+    <p><strong>Granted Role:</strong> <span style="background: #5cb85c; color: white; padding: 2px 5px; border-radius: 3px;">{{requestedRole}}</span></p>
+    <hr>
+    <p>To initialize your new permissions, please refresh your application substrate or click the button below:</p>
+    {{> button text="Synchronize Identity" url="https://web.localhost:5173/403" color="#5cb85c"}}
+{{else}}
+    <h2 style="color: #d9534f;">Access Request Denied</h2>
+    <p>Greetings,</p>
+    <p>Your request for elevated clearance on the Iopic identity substrate has been reviewed and declined at this time.</p>
+    <hr>
+    <p><strong>Reason for Denial:</strong> {{denialReason}}</p>
+    <hr>
+    {{> button text="Return Home" url="https://web.localhost:5173/" color="#d9534f"}}
+{{/if}}

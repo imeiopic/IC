@@ -1,0 +1,25 @@
+%% IOPIC 16-Thread Global Processor - Mermaid Diagram
+flowchart TB
+    subgraph Q1[SPATIAL INTEGRITY (IDEAL)\nBits 1-4\nTeal]
+      A1(AND) --> A2(OR)
+      A2 --> T10[Terminal 10]
+    end
+    subgraph Q2[IDENTITY PERSISTENCE (PEOPLE)\nBits 5-8\nPurple]
+      B1(NAND) --> B2(AND)
+      B2 --> T10
+    end
+    subgraph Q3[VALUE EXCHANGE (BS-MOLECULE)\nBits 9-12\nYellow]
+      C1(XNOR) --> C2(XOR)
+      C2 --> C3(OR)
+      C3 --> T10
+    end
+    subgraph Q4[SYSTEM DEFENSE (ACTIVE)\nBits 13-16\nRed]
+      D1(NAND) --> D2(OR)
+      D2 --> T10
+    end
+    T10[Central Terminal 10\nBinary Completion Port\nLOCKED]
+    style Q1 fill:#008080,stroke:#222,stroke-width:2px
+    style Q2 fill:#800080,stroke:#222,stroke-width:2px
+    style Q3 fill:#FFD700,stroke:#222,stroke-width:2px
+    style Q4 fill:#C00,stroke:#222,stroke-width:2px
+    style T10 fill:#222,stroke:#0ff,stroke-width:4px

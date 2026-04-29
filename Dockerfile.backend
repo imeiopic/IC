@@ -1,0 +1,12 @@
+FROM alpine:latest
+WORKDIR /app
+
+RUN apk add --no-cache curl bash
+
+# Download and extract the Fireback Linux AMD64 binary
+RUN curl -L https://github.com/torabian/fireback/releases/latest/download/fireback_linux_amd64.tar.gz | tar xz -C /usr/local/bin fireback \
+    && chmod +x /usr/local/bin/fireback
+
+EXPOSE 5000
+
+CMD ["sh", "-c", "fireback serve --port 5000 $FIREBACK_OPTS"]

@@ -1,0 +1,230 @@
+name: Build and Publish Docker Images
+
+on:
+  push:
+    branches:
+      - main
+      - staging
+  # Allows you to trigger this workflow manually from the Actions tab
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  # github.repository is usually in the format "owner/repo"
+  # We use lower() because Docker image names must be lowercase
+  IMAGE_NAME_FRONTEND: ${{ github.repository }}-frontend
+  IMAGE_NAME_BACKEND: ${{ github.repository }}-backend
+
+jobs:
+  build-and-push-images:
+    name: Build and Push to GHCR
+    runs-on: ubuntu-latest
+    # Dynamically load the correct secrets/variables based on the branch
+    environment: ${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}
+
+    # Grant permissions needed to push to GitHub Container Registry and code updates
+    permissions:
+      contents: write
+      packages: write
+      id-token: write # Required for requesting the OIDC JWT
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          # Use a Personal Access Token so the automated version bump can bypass branch protection
+          token: ${{ secrets.ADMIN_PAT }}
+
+      - name: Determine and Set App Version
+        run: |
+          if [ "${{ github.ref }}" == "refs/heads/main" ]; then
+            git config --global user.name 'github-actions[bot]'
+            git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+            # Bump patch version and include [skip ci] to prevent workflow loop
+            npm version patch -m "chore: bump version to %s [skip ci]"
+            # Push the commit and the new version tag back to the repo
+            git push --follow-tags
+
+            # Extract the newly bumped version to use as the Docker tag
+            NEW_VERSION=$(node -p "require('./package.json').version")
+            echo "APP_VERSION=$NEW_VERSION" >> $GITHUB_ENV
+          else
+            # For staging, use the current version with a commit hash suffix
+            CURRENT_VERSION=$(node -p "require('./package.json').version")
+            SHORT_SHA=$(git rev-parse --short HEAD)
+            echo "APP_VERSION=${CURRENT_VERSION}-staging.${SHORT_SHA}" >> $GITHUB_ENV
+          fi
+
+      - name: Generate .env.production for Frontend Build
+        # This synthesizes your production substrate so the Vite build inside
+        # the Dockerfile has access to your Firebase/Nginx routing variables.
+        run: |
+          echo "VITE_FIREBASE_API_KEY=${{ secrets.VITE_FIREBASE_API_KEY }}" >> .env.production
+          echo "VITE_FIREBASE_AUTH_DOMAIN=${{ vars.FIREBASE_AUTH_DOMAIN }}" >> .env.production
+          echo "VITE_FIREBASE_PROJECT_ID=${{ vars.FIREBASE_PROJECT_ID }}" >> .env.production
+          echo "VITE_FIREBASE_STORAGE_BUCKET=${{ vars.FIREBASE_STORAGE_BUCKET }}" >> .env.production
+          echo "VITE_FIREBASE_MESSAGING_SENDER_ID=${{ vars.FIREBASE_MESSAGING_SENDER_ID }}" >> .env.production
+          echo "VITE_FIREBASE_APP_ID=${{ secrets.VITE_FIREBASE_APP_ID }}" >> .env.production
+          echo "VITE_FIREBASE_MEASUREMENT_ID=${{ vars.FIREBASE_MEASUREMENT_ID }}" >> .env.production
+          echo "VITE_FIREBACK_PORT=5000" >> .env.production
+          echo "VITE_FIREBACK_HOST=backend" >> .env.production
+          echo "VITE_SSL_STRATEGY=none" >> .env.production
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Frontend Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          # Tag with both 'latest' and the specific package.json version
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_FRONTEND }}:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_FRONTEND }}:${{ env.APP_VERSION }}
+
+      - name: Build and push Backend Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile.backend
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_BACKEND }}:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_BACKEND }}:${{ env.APP_VERSION }}
+
+      - name: Extract Frontend Assets
+        run: |
+          # Pull the image to ensure it's available in the local docker daemon
+          docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_FRONTEND }}:${{ env.APP_VERSION }}
+
+          # Create a temporary container from the image
+          docker create --name temp_frontend ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_FRONTEND }}:${{ env.APP_VERSION }}
+
+          # Copy the compiled assets from the Nginx web root to the runner's workspace
+          docker cp temp_frontend:/usr/share/nginx/html ./dist
+
+          # Remove the temporary container
+          docker rm temp_frontend
+
+          # Zip the assets
+          zip -r frontend-dist-v${{ env.APP_VERSION }}.zip ./dist
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Upload Compressed Assets to S3
+        run: |
+          # Upload Gzip files with the correct Content-Encoding
+          aws s3 sync ./dist/compressed s3://${{ secrets.AWS_S3_BUCKET }}/compressed \
+            --exclude "*" --include "*.gz" \
+            --content-encoding "gzip" \
+            --cache-control "public, max-age=31536000, immutable"
+
+          # Upload Brotli files with the correct Content-Encoding
+          aws s3 sync ./dist/compressed s3://${{ secrets.AWS_S3_BUCKET }}/compressed \
+            --exclude "*" --include "*.br" \
+            --content-encoding "br" \
+            --cache-control "public, max-age=31536000, immutable"
+
+      - name: Upload Uncompressed Assets to S3
+        run: |
+          # 1. Upload hashed Vite assets (JS, CSS, Images, Fonts) with an aggressive cache
+          aws s3 sync ./dist/assets s3://${{ secrets.AWS_S3_BUCKET }}/assets \
+            --cache-control "public, max-age=31536000, immutable"
+            
+          # 2. Upload remaining root-level public files (favicon.svg, robots.txt, etc.) with a shorter cache
+          aws s3 sync ./dist s3://${{ secrets.AWS_S3_BUCKET }} \
+            --exclude "index.html" \
+            --exclude "compressed/*" \
+            --exclude "assets/*" \
+            --cache-control "public, max-age=86400"
+
+      - name: Upload index.html to S3
+        run: |
+          aws s3 cp ./dist/index.html s3://${{ secrets.AWS_S3_BUCKET }}/index.html \
+            --cache-control "no-cache" \
+            --content-type "text/html"
+
+      - name: Invalidate CloudFront Cache
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id ${{ secrets.AWS_CLOUDFRONT_DISTRIBUTION_ID }} \
+            --paths "/*"
+
+      - name: Create GitHub Release
+        # The GitHub CLI is pre-installed on the ubuntu-latest runner
+        if: github.ref == 'refs/heads/main'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "v${{ env.APP_VERSION }}" frontend-dist-v${{ env.APP_VERSION }}.zip \
+            --generate-notes \
+            --title "Release v${{ env.APP_VERSION }}"
+
+      - name: Transmit Update Signal to Production Substrate
+        # Fires a webhook to the production server to immediately pull and restart containers
+        run: |
+          curl -H "Authorization: Bearer ${{ secrets.WATCHTOWER_TOKEN }}" \
+               https://${{ secrets.PRODUCTION_SERVER_DOMAIN }}/v1/update
+
+      - name: Rollback Git Version Bump on Failure
+        # Reverts the package.json bump and deletes the tag if the build crashes
+        if: failure() && github.ref == 'refs/heads/main'
+        run: |
+          if [ -n "${{ env.APP_VERSION }}" ]; then
+            echo "Rolling back version bump for v${{ env.APP_VERSION }}..."
+            
+            # 1. Delete the tag from the remote repository so it can be reused on the next run
+            git push --delete origin "v${{ env.APP_VERSION }}" || true
+            
+            # 2. Revert the commit that bumped the version (keeps history moving forward safely)
+            git revert HEAD --no-edit
+            
+            # 3. Amend the revert commit to include [skip ci] to prevent a workflow loop
+            git commit --amend -m "$(git log -1 --format=%B) [skip ci]"
+            
+            # 4. Pull any recent merges to prevent push rejection, then push the revert
+            git pull --rebase origin main
+            git push
+          else
+            echo "No version tag was generated, skipping git rollback."
+          fi
+
+      - name: Notify Team via Webhook
+        # Sends a success message to a Discord or Slack channel.
+        env:
+          WEBHOOK_URL: ${{ secrets.TEAM_WEBHOOK_URL }}
+          ENV_NAME: ${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}
+        run: |
+          if [ -n "$WEBHOOK_URL" ]; then
+            curl -H "Content-Type: application/json" \
+                 -X POST \
+                 -d "{\"content\": \"🚀 **Deployment Successful!**\nVersion **v${{ env.APP_VERSION }}** of the Iopic Substrate has been deployed to **${ENV_NAME}**.\n[View Action](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})\"}" \
+                 $WEBHOOK_URL
+          else
+            echo "TEAM_WEBHOOK_URL secret is not set, skipping notification."
+          fi
+
+      - name: Notify Team of Failure
+        # Sends a failure message if any previous step in the job crashed
+        if: failure()
+        env:
+          WEBHOOK_URL: ${{ secrets.TEAM_WEBHOOK_URL }}
+        run: |
+          if [ -n "$WEBHOOK_URL" ]; then
+            curl -H "Content-Type: application/json" \
+                 -X POST \
+                 -d "{\"content\": \"🚨 **Deployment Failed!**\nThe Iopic Substrate build or deployment process has crashed.\n[View Action Logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})\"}" \
+                 $WEBHOOK_URL
+          else
+            echo "TEAM_WEBHOOK_URL secret is not set, skipping notification."
+          fi

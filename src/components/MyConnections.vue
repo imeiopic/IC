@@ -96,7 +96,7 @@
               <div>SMS action (implement as needed)</div>
             </template>
             <template v-else-if="activePopover === 'mms'">
-              <quill-editor v-model="mmsContent" style="height:200px;width:320px;background:#fff;" />
+              <textarea v-model="mmsContent" style="height:120px;width:320px;background:#fff;resize:vertical;" placeholder="Type your MMS message..."></textarea>
               <button class="qr-btn" style="margin-top:1rem;" @click="sendMMSRich">Send MMS</button>
             </template>
           </div>
@@ -109,7 +109,6 @@
     import { ref } from 'vue'
     import { QrcodeStream } from 'vue-qrcode-reader'
     import QrcodeVue from 'qrcode.vue'
-      import { quillEditor } from 'vue3-quill'
 
     type Connection = {
       display: string;

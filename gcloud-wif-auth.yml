@@ -1,0 +1,121 @@
+name: GCloud Auth with WIF
+on:
+  push:
+    branches:
+      - main
+      - staging
+      - develop
+  pull_request:
+    branches:
+      - main
+      - staging
+      - develop
+
+jobs:
+  gitleaks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Required to scan history
+      - name: Gitleaks Scan
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  setup-and-run:
+    runs-on: ubuntu-latest
+    environment: >-
+      ${{ github.ref == 'refs/heads/main' && 'production' || 
+          github.ref == 'refs/heads/staging' && 'staging' || 
+          'development' 
+      }}
+    permissions:
+      contents: "read"
+      id-token: "write" # Required for requesting the JWT
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - id: "auth"
+        name: "Authenticate to Google Cloud"
+        uses: "google-github-actions/auth@v2"
+        with:
+          workload_identity_provider: "projects/859589499177/locations/global/workloadIdentityPools/github-actions-pool/providers/github-provider"
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+
+      - name: "Set up Cloud SDK"
+        uses: "google-github-actions/setup-gcloud@v2"
+
+      - name: "Install and Build App"
+        run: |
+          npm install
+          npm run build
+        env:
+          VITE_FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
+          VITE_FIREBASE_AUTH_DOMAIN: ${{ vars.FIREBASE_AUTH_DOMAIN }}
+          VITE_FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID }}
+          VITE_FIREBASE_STORAGE_BUCKET: ${{ vars.FIREBASE_STORAGE_BUCKET }}
+          VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ vars.FIREBASE_MESSAGING_SENDER_ID }}
+          VITE_FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
+          VITE_FIREBASE_MEASUREMENT_ID: ${{ vars.FIREBASE_MEASUREMENT_ID }}
+          VITE_GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          VITE_GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+
+      - name: "Run GCloud Commands"
+        run: |
+          # 1. Verify the authenticated service account
+          gcloud auth list
+
+          # 2. Capture and export the project ID for subsequent API calls
+          export PROJECT_ID=$(gcloud config get-value project)
+          echo "PROJECT_ID=${PROJECT_ID}" >> $GITHUB_ENV
+
+          # 3. Automated Port Forwarding
+          # Capture the dry-run command (e.g., /usr/bin/ssh -p 6000 ...)
+          SSH_BASE_CMD=$(gcloud cloud-shell ssh --dry-run)
+
+          # Append -L to forward local 9000 to Cloud Shell 8080, and -N for tunnel mode
+          # Use 'eval' to execute the string as a command
+          eval "$SSH_BASE_CMD -L 9000:localhost:8080 -N -f"
+
+          # 4. Verify the tunnel is active
+          echo "Waiting for tunnel to establish..."
+          for i in {1..10}; do
+            if nc -z localhost 9000; then
+              echo "Tunnel established: Local port 9000 is now forwarded to Cloud Shell port 8080."
+              exit 0
+            fi
+            echo "Attempt $i: Tunnel not ready yet..."
+            sleep 1
+          done
+
+          echo "Error: Tunnel failed to establish after 10 seconds."
+          exit 1
+
+          # Example: Use the access token for an Identity Toolkit API call
+          # as seen in @firebase/auth integration tests
+          # curl -H "Authorization: Bearer $(gcloud auth print-access-token)" ...
+
+      - name: "Set up JDK"
+        uses: actions/setup-java@v4
+        with:
+          java-version: "17"
+          distribution: "temurin"
+
+      - name: "Run Firestore Security Rules Tests"
+        run: |
+          # Run tests using the Firebase Emulator Suite.
+          # This assumes your test command is defined in package.json (e.g., "npm test").
+          npx firebase-tools emulators:exec --only firestore,auth --project $PROJECT_ID "npm test"
+
+      - name: "Deploy Firestore Indexes"
+        run: |
+          # Deploy indexes using the project ID captured in the previous step
+          npx firebase-tools deploy --only firestore:indexes --project $PROJECT_ID
+
+      - name: "Deploy Firestore Security Rules"
+        run: |
+          # Deploy security rules using the project ID captured in step 2
+          npx firebase-tools deploy --only firestore:rules --project $PROJECT_ID

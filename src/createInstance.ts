@@ -19,12 +19,12 @@ export async function saveEntityDomain(entityId: string, entityDomain: EntityDom
   await setDoc(ref, entityDomain);
 }
 
-// Function to fulfill the Logic of Reality for a new user
+// Function to fulfill the Logic of Reality for a new member
 export const createInstance = async (
-  userId: string,
+  memberId: string,
   location: { x: number; y: number; z: number }
 ) => {
-  const instanceRef = doc(db, "0001_instances", userId);
+  const instanceRef = doc(db, "0001_instances", memberId);
   await setDoc(instanceRef, {
     thread: "0001",
     status: "CONNECTED", // Fulfills 0011

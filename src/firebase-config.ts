@@ -1,15 +1,21 @@
-import { initializeApp } from "firebase/app";
+import { initializeApp, getApps, getApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 
+// Firebase configuration for the Iopic Substrate
+// Environment variables are loaded via Vite's import.meta.env
 const firebaseConfig = {
-  apiKey: "AIzaSyBkFunVwuTEEgmt4hn2LTi0yWEUXHr91OQ",
-  authDomain: "calcium-channel-489906-m2.firebaseapp.com",
-  projectId: "calcium-channel-489906-m2",
-  storageBucket: "calcium-channel-489906-m2.firebasestorage.app",
-  messagingSenderId: "859589499177",
-  appId: "1:859589499177:web:622e39eedf04ae71c1ff38",
-  measurementId: "G-HKFP3D219Y"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
-const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app);
+// Prevent duplicate app initialization during HMR (Hot Module Replacement)
+const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+const db = getFirestore(app);
+
+export { app, db };
+export default app;

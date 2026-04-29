@@ -1,0 +1,17 @@
+$card-shadow-blue: 0 2px 8px 0 rgba(0, 191, 255, 0.15); // Example blue shadow
+// Global SCSS Variables (Dart Sass module compatible)
+
+// CoreUI / Bootstrap Variable Overrides
+$primary: #00ff41; // Iopic/Matrix Green
+$secondary: #00bfff; // Digital Blue
+$warning: #ffc107; // Standard warning yellow
+$body-bg: #000000; // Deep black background
+$body-color: #ffffff; // White text by default
+$font-family-sans-serif: 'Share Tech Mono', monospace, sans-serif;
+
+// Protocol Variables (Required by src/style.scss)
+$protocol-blue: $secondary;
+$protocol-green: $primary;
+$protocol-dark: $body-bg;
+$protocol-white: $body-color;
+$protocol-font: $font-family-sans-serif;

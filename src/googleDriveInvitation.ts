@@ -2,9 +2,9 @@
 // Production-ready: Handles OAuth2, file search, and file reading
 // Usage: import { getInvitationFromDrive, ensureGapiLoaded } from './googleDriveInvitation'
 
-const CLIENT_ID = '849202745449-hqhmnbb1eg1t68b23kh09gg4pl0uda9s.apps.googleusercontent.com';
-const API_KEY = 'YOUR_GOOGLE_API_KEY'; // <-- Replace with your API key
-// const CLIENT_SECRET = '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'; // Not used in frontend
+const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
+const API_KEY = import.meta.env.VITE_GOOGLE_API_KEY || '';
+// const CLIENT_SECRET = import.meta.env.VITE_GOOGLE_CLIENT_SECRET || ''; // Not used in frontend
 const DISCOVERY_DOCS = [
   'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'
 ];

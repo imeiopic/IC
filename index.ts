@@ -44,7 +44,7 @@ const routes: Array<RouteRecordRaw> = [
   {
     path: '/admin/email-logs',
     name: 'EmailLogs',
-    component: () => import('./src/views/EmailLogsDashboard.vue'),
+    // component: () => import('./src/views/EmailLogsDashboard.vue'),
     meta: { requiresAuth: true, requiresAdmin: true }
   }
 ];

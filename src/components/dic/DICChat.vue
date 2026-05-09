@@ -188,11 +188,11 @@ function play(text: string, lang: string) {
   utter.lang = lang;
   window.speechSynthesis.speak(utter);
 }
+<script>
+// ...existing code...
+console.log('[Chat]', ...args);
+// ...existing code...
 </script>
-
-<style scoped>
-.dic-chat {
-  max-width: 600px;
   margin: 2rem auto;
   padding: 2rem;
   border: 1px solid #ccc;

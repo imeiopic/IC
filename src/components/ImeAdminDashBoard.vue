@@ -5,22 +5,33 @@
         <CCard class="mb-4">
           <CCardHeader>Crypto Wallet (MetaMask)</CCardHeader>
           <CCardBody>
-            <div v-if="!walletAddress">
+            <div v-if="!walletAddress && !showThankYou">
               <button @click="connectWallet" class="btn btn-primary">Connect MetaMask</button>
             </div>
             <div v-else>
               <div><strong>Wallet Address:</strong> {{ walletAddress }}</div>
-              <div v-if="isImeIopic">
-                <strong>ETH Balance:</strong> {{ ethBalance }} ETH
-              </div>
+              <div v-if="isImeIopic"><strong>ETH Balance:</strong> {{ ethBalance }} ETH</div>
               <div class="mt-2">
-                <input v-model="sendTo" placeholder="Recipient Address" class="form-control" style="margin-bottom:0.5rem;" />
-                <input v-model="sendAmount" placeholder="Amount (ETH)" type="number" class="form-control" style="margin-bottom:0.5rem;" />
+                <input
+                  v-model="sendTo"
+                  placeholder="Recipient Address"
+                  class="form-control"
+                  style="margin-bottom: 0.5rem"
+                />
+                <input
+                  v-model="sendAmount"
+                  placeholder="Amount (ETH)"
+                  type="number"
+                  class="form-control"
+                  style="margin-bottom: 0.5rem"
+                />
                 <button @click="sendEth" class="btn btn-success">Send ETH</button>
               </div>
               <div class="mt-2">
-                <button @click="copyAddress" class="btn btn-secondary">Copy My Address (for receiving)</button>
-                <span v-if="copySuccess" style="color:green; margin-left:0.5rem;">Copied!</span>
+                <button @click="copyAddress" class="btn btn-secondary">
+                  Copy My Address (for receiving)
+                </button>
+                <span v-if="copySuccess" style="color: green; margin-left: 0.5rem">Copied!</span>
               </div>
             </div>
           </CCardBody>
@@ -37,9 +48,12 @@
               <h5 class="mt-2">{{ person.name }}</h5>
               <p class="text-muted">{{ person.description }}</p>
             </div>
-            <div><strong>IOWB:</strong> {{ person.iowb.accountNumber }} ({{ person.iowb.balance }} IO$)</div>
+            <div>
+              <strong>IOWB:</strong> {{ person.iowb.accountNumber }} ({{ person.iowb.balance }} IO$)
+            </div>
             <div><strong>Bank:</strong> {{ person.realWorldBank?.bankName }}</div>
-            <div><strong>Payment Methods:</strong>
+            <div>
+              <strong>Payment Methods:</strong>
               <ul>
                 <li v-for="pm in person.paymentMethods" :key="pm.label">
                   <strong>{{ pm.label }}:</strong> {{ pm.details }}
@@ -138,6 +152,22 @@ async function getBalance() {
     const provider = new (window as any).ethers.providers.Web3Provider((window as any).ethereum);
     const balance = await provider.getBalance(walletAddress.value);
     ethBalance.value = (parseFloat((window as any).ethers.utils.formatEther(balance))).toFixed(4);
+      <CRow>
+        <CCol md="12">
+          <CCard class="mb-4">
+            <CCardHeader>Recent IO$ Donations</CCardHeader>
+            <CCardBody>
+              <ul>
+                <li v-for="tx in transactions" :key="tx.transactionId">
+                  <b>{{ tx.credited }} IO$</b> credited (Tx: {{ tx.transactionId }})
+                </li>
+                <li v-if="transactions.length === 0">No donations yet.</li>
+              </ul>
+            </CCardBody>
+          </CCard>
+        </CCol>
+      </CRow>
+      <ThankYouModal :show="showThankYou" @close="showThankYou = false" />
   }
 }
 
@@ -155,6 +185,8 @@ async function sendEth() {
     });
     alert('Transaction sent! Hash: ' + tx.hash);
     getBalance();
+  const transactions = ref<any[]>([]);
+  const showThankYou = ref(false);
   } catch (e) {
     alert('Transaction failed.');
   }

@@ -1,5 +1,15 @@
 {
   "projects": {
     "default": "calcium-channel-489906-m2"
-  }
+  },
+  "targets": {
+    "iopic-vre": {
+      "storage": {
+        "default": [
+          "iopic-vre.firebasestorage.app"
+        ]
+      }
+    }
+  },
+  "etags": {}
 }

@@ -5,7 +5,7 @@
 
     <!-- Quick Links to All Views -->
     <div class="quick-links my-4 d-flex flex-wrap gap-3 justify-content-center">
-      <router-link class="btn btn-outline-primary" to="/io-org">IOorg Substrate</router-link>
+      <router-link class="btn btn-outline-primary" to="/io-org">IO.org Substrate</router-link>
       <router-link class="btn btn-outline-primary" to="/logical-truth">Logical Truth</router-link>
       <router-link class="btn btn-outline-primary" to="/manifesto">Manifesto</router-link>
       <router-link class="btn btn-outline-primary" to="/register-node"
@@ -137,7 +137,7 @@
                   >IO Home
                 </CDropdownItem>
                 <CDropdownItem @click="router.push('/io-org')" style="cursor: pointer"
-                  >IOorg Substrate
+                  >IO.org Substrate
                 </CDropdownItem>
                 <template v-if="user">
                   <CDropdownDivider />
@@ -197,9 +197,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref } from 'vue';
 import { useAuth } from './useAuth';
 import { useRouter, useRoute } from 'vue-router';
+// @ts-ignore
 import ioLogo from './assets/images/icon.png';
 import {
   CDropdown,
@@ -209,17 +210,16 @@ import {
   CDropdownDivider,
   CTooltip
 } from '@coreui/vue';
-import { useSystemBus } from './components/useSystemBus'; // Corrected path to centralized bus
-
 const { user, logout: authLogout } = useAuth();
 const router = useRouter();
 const route = useRoute();
-
-const { isOnline, isSynced, busActivity } = useSystemBus(); // Use the composable
-
+import { useSystemBus } from './components/useSystemBus'; // Corrected path to centralized bus
+// const bus = useSystemBus(); // Removed unused bus variable
+// Provide dummy/fallback values for UI (since SystemBus does not provide these)
+const isSynced = ref(false); // Set to true when bus is synced (implement logic as needed)
+const busActivity = ref(0); // Increment or update as needed for UI
 // Modal state for 16-Thread Reality story
 const show16ThreadStory = ref(false);
-
 const logout = async () => {
   await authLogout();
   router.push('/');
@@ -374,5 +374,5 @@ const logout = async () => {
 }
 </style>
 
-.home-page { min-height: 100vh; background: url('./assets/images/iocreation.png') center
-center/cover no-repeat fixed; position: relative; }
+.home-page { min-height: 100vh; background: url('/images/iopicworld.jpg') center center/cover
+no-repeat fixed; position: relative; }

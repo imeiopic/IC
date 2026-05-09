@@ -22,7 +22,7 @@ vi.mock("./src/views/DashboardPage.vue", () => ({
 vi.mock("./src/views/AccessDeniedPage.vue", () => ({
   default: { template: "<div/>" },
 }));
-vi.mock("./src/views/EmailLogsDashboard.vue", () => ({
+// vi.mock("./src/views/EmailLogsDashboard.vue", () => ({
   default: { template: "<div/>" },
 }));
 

@@ -1,0 +1,1 @@
+Moved EmailLogsDashboard.vue and ConfirmPurgeModal.vue to .trash for removal.

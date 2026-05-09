@@ -2,7 +2,7 @@ import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore';
 import { getAuth, connectAuthEmulator } from 'firebase/auth';
 import { getStorage } from 'firebase/storage';
-
+import { getDatabase, ref, set, connectDatabaseEmulator } from "firebase/database";
 import { initializeAppCheck, ReCaptchaEnterpriseProvider, type AppCheck } from 'firebase/app-check';
 
 declare global {
@@ -17,23 +17,27 @@ declare global {
   }
 }
 
-// Prioritize runtime window config, fallback to build-time env vars
+// 1. Core Configuration
 const firebaseConfig = window.__APP_CONFIG__?.firebase || {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
   projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
   storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  databaseURL: import.meta.env.VITE_FIREBASE_DATABASE_URL // ADD THIS to your .env
 };
 
+// 2. Initialize App Substrate
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
-const db = getFirestore(app); // Firestore instance
-const auth = getAuth(app); // Auth instance
-const storage = getStorage(app); // Storage instance
 
-// Redirect to emulator in development mode or if explicitly requested via environment variable.
-// This allows 'npm run preview' builds to connect to local emulators when needed.
+// 3. Manifest Service Instances
+const db = getFirestore(app);
+const auth = getAuth(app);
+const storage = getStorage(app);
+const rtdb = getDatabase(app); // RTD Instance Grounded
+
+// 4. Emulator Handshake
 const useEmulator =
   window.__APP_CONFIG__?.useEmulator ??
   (import.meta.env.DEV ||
@@ -41,22 +45,18 @@ const useEmulator =
     window.location.hostname === 'localhost');
 
 if (useEmulator) {
-  // Note: 'localhost' is used here.
-  // If testing on physical mobile devices, use your machine's IP.
   connectFirestoreEmulator(db, 'localhost', 8080);
-  connectAuthEmulator(auth, 'http://localhost:9099'); // Connect to Auth Emulator
-  console.log('--- Connected to Firestore Emulator ---');
-  console.log('--- Connected to Auth Emulator ---');
+  connectAuthEmulator(auth, 'http://localhost:9099');
+  connectDatabaseEmulator(rtdb, 'localhost', 9000); // Connect RTD to Emulator
+  console.log('--- 16-THREAD EMULATORS ACTIVE: FS(8080), AUTH(9099), RTD(9000) ---');
 }
 
-const appCheckSiteKey =
-  window.__APP_CONFIG__?.appCheckSiteKey || import.meta.env.VITE_APP_CHECK_SITE_KEY;
-
+// 5. App Check Integrity
+const appCheckSiteKey = window.__APP_CONFIG__?.appCheckSiteKey || import.meta.env.VITE_APP_CHECK_SITE_KEY;
 let appCheck: AppCheck | undefined;
 
 if (appCheckSiteKey) {
   if (useEmulator) {
-    // Enable debug mode so App Check works locally with emulators
     window.FIREBASE_APPCHECK_DEBUG_TOKEN =
       window.__APP_CONFIG__?.appCheckDebugToken ||
       import.meta.env.VITE_APP_CHECK_DEBUG_TOKEN ||
@@ -64,8 +64,18 @@ if (appCheckSiteKey) {
   }
   appCheck = initializeAppCheck(app, {
     provider: new ReCaptchaEnterpriseProvider(appCheckSiteKey),
-    isTokenAutoRefreshEnabled: true // Refresh tokens automatically in the background
+    isTokenAutoRefreshEnabled: true
   });
 }
 
-export { app, db, auth, storage, appCheck }; // Export app, db, auth, storage, and appCheck
+// 6. High-Velocity Pulse Export
+export const broadcastPulse = (uid: string, location: object) => {
+  const pulseRef = ref(rtdb, 'pulses/' + uid);
+  set(pulseRef, {
+    active: true,
+    coords: location,
+    timestamp: Date.now()
+  });
+};
+
+export { app, db, auth, storage, rtdb, appCheck };

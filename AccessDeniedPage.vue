@@ -137,8 +137,7 @@
 import { ref, computed, watch, onUnmounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useAuth } from './useAuth';
-// import { useErrorSubstrate } from '@/errorHandler';
-import { useErrorSubstrate } from './errorHandler';
+import { useErrorSubstrate } from '@/errorHandler';
 import { db } from '@/firebase';
 import { IopicTranslator } from '@/IopicUniversalTranslator';
 import { useAsyncSymmetry } from '@/composables/useAsyncSymmetry';
@@ -151,15 +150,15 @@ import {
   orderBy,
   limit,
   onSnapshot,
-  Unsubscribe,
+  type Unsubscribe,
   deleteDoc,
-  doc
+  doc,
 } from 'firebase/firestore';
 
 const route = useRoute();
 const router = useRouter();
 const missingRole = computed(() => route.query.role);
-const backendPort = import.meta.env.VITE_FIREBACK_PORT || 4000;
+const backendPort = Number(import.meta.env.VITE_FIREBACK_PORT) || 5000;
 const isSubmitting = ref(false);
 const isDeleting = ref(false);
 const requestSent = ref(false);
@@ -169,7 +168,7 @@ const translationConfidence = ref<number | null>(null);
 const translationLatency = ref<string | null>(null);
 const highNoiseDetected = ref(false);
 const redirectCountdown = ref<number | null>(null);
-let countdownInterval: any = null;
+let countdownInterval: ReturnType<typeof setInterval> | null = null;
 
 // Initialize the translation substrate using the symmetry guard
 const { execute: translate, isLoading: isTranslating } = useAsyncSymmetry(
@@ -309,7 +308,7 @@ const protocolClaims = computed(() => {
     'firebase',
     'name',
     'picture',
-    'phone_number'
+    'phone_number',
   ];
   return Object.fromEntries(
     Object.entries(claims.value).filter(([key]) => !standardClaims.includes(key))
@@ -328,7 +327,7 @@ async function submitAccessRequest() {
       status: 'Pending',
       timestamp: serverTimestamp(),
       // Include current claims for context
-      currentClaims: claims.value
+      currentClaims: claims.value,
     });
 
     requestSent.value = true;

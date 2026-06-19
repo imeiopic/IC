@@ -1,0 +1,18 @@
+name: Cache Pruning
+on:
+  schedule:
+    - cron: '0 2 * * *' # Run daily at 2 AM
+  workflow_dispatch: # Allow manual triggers
+
+jobs:
+  prune:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write # Required to delete caches
+    steps:
+      - name: Purge All Caches
+        shell: bash
+        run: |
+          gh cache delete --all --repo ${{ github.repository }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

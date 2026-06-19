@@ -1,0 +1,75 @@
+name: Production Utility Operations
+
+on:
+  # Manual trigger for safety, allows providing specific arguments
+  workflow_dispatch:
+    inputs:
+      script:
+        description: 'Which script to run?'
+        required: true
+        default: 'backfill-daily-stats'
+        type: choice
+        options:
+          - backfill-daily-stats
+          - create-system-user
+      dry_run:
+        description: 'Perform a dry run? (Logs changes without writing. Highly recommended for backfills)'
+        type: boolean
+        default: true
+        required: true
+      confirm:
+        description: 'Type "I-AM-SURE" to confirm production execution'
+        type: string
+        required: true
+      args:
+        description: 'Additional arguments (e.g., --status Failed)'
+        required: false
+        type: string
+
+jobs:
+  run-utility:
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: 'read'
+      id-token: 'write' # Required for OIDC/WIF
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Safety Confirmation Check
+        run: |
+          if [[ "${{ github.event.inputs.confirm }}" != "I-AM-SURE" ]]; then
+            echo "❌ CRITICAL FAILURE: Confirmation string mismatch. Aborting production job for safety."
+            exit 1
+          fi
+
+      - name: Authenticate to Google Cloud via WIF
+        id: 'auth'
+        uses: 'google-github-actions/auth@v2'
+        with:
+          # These values should be stored in GitHub Variables for the 'production' environment
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+          # This is the "magic" that makes Application Default Credentials (ADC) work
+          create_credentials_file: true
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Execute Utility Script
+        run: |
+          DRY_RUN_ARG=""
+          # Append dry-run flag if enabled and supported by the script
+          if [[ "${{ github.event.inputs.dry_run }}" == "true" ]]; then
+            DRY_RUN_ARG="--dry-run"
+          fi
+
+          node ${{ github.event.inputs.script }}.js --project-id ${{ vars.FIREBASE_PROJECT_ID }} $DRY_RUN_ARG ${{ github.event.inputs.args }}

@@ -70,6 +70,9 @@ jobs:
           echo "VITE_FIREBACK_HOST=backend" >> .env.production
           echo "VITE_SSL_STRATEGY=none" >> .env.production
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Log in to the Container registry
         uses: docker/login-action@v3
         with:
@@ -87,6 +90,8 @@ jobs:
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_FRONTEND }}:latest
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_FRONTEND }}:${{ env.APP_VERSION }}
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,mode=max,scope=frontend
 
       - name: Build and push Backend Image
         uses: docker/build-push-action@v5
@@ -97,6 +102,8 @@ jobs:
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_BACKEND }}:latest
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_BACKEND }}:${{ env.APP_VERSION }}
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,mode=max,scope=backend
 
       - name: Extract Frontend Assets
         run: |
@@ -124,13 +131,13 @@ jobs:
       - name: Upload Compressed Assets to S3
         run: |
           # Upload Gzip files with the correct Content-Encoding
-          aws s3 sync ./dist/compressed s3://${{ secrets.AWS_S3_BUCKET }}/compressed \
+          aws s3 sync ./dist s3://${{ secrets.AWS_S3_BUCKET }} \
             --exclude "*" --include "*.gz" \
             --content-encoding "gzip" \
             --cache-control "public, max-age=31536000, immutable"
 
           # Upload Brotli files with the correct Content-Encoding
-          aws s3 sync ./dist/compressed s3://${{ secrets.AWS_S3_BUCKET }}/compressed \
+          aws s3 sync ./dist s3://${{ secrets.AWS_S3_BUCKET }} \
             --exclude "*" --include "*.br" \
             --content-encoding "br" \
             --cache-control "public, max-age=31536000, immutable"
@@ -139,13 +146,14 @@ jobs:
         run: |
           # 1. Upload hashed Vite assets (JS, CSS, Images, Fonts) with an aggressive cache
           aws s3 sync ./dist/assets s3://${{ secrets.AWS_S3_BUCKET }}/assets \
+            --exclude "*.gz" --exclude "*.br" \
             --cache-control "public, max-age=31536000, immutable"
             
           # 2. Upload remaining root-level public files (favicon.svg, robots.txt, etc.) with a shorter cache
           aws s3 sync ./dist s3://${{ secrets.AWS_S3_BUCKET }} \
             --exclude "index.html" \
-            --exclude "compressed/*" \
             --exclude "assets/*" \
+            --exclude "*.gz" --exclude "*.br" \
             --cache-control "public, max-age=86400"
 
       - name: Upload index.html to S3

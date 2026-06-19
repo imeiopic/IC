@@ -46,7 +46,12 @@ async function backfillDailyStats() {
 
     // Paging through the collection to handle high-volume substrates efficiently
     while (true) {
-      let q = db.collection('email_logs')
+      // IMPORTANT: This query requires a composite index in Firestore:
+      // Collection: 'email_logs'
+      // Fields: 'status' (Ascending), 'timestamp' (Ascending)
+      // Without this index, the query will fail for large datasets.
+      let q = db
+        .collection('email_logs')
         .where('status', '==', targetStatus)
         .orderBy('timestamp')
         .limit(PAGE_SIZE);
@@ -55,7 +60,7 @@ async function backfillDailyStats() {
       const snapshot = await q.get();
       if (snapshot.empty) break;
 
-      snapshot.forEach(doc => {
+      snapshot.forEach((doc) => {
         const data = doc.data();
         const ts = data.timestamp;
         if (!ts) return;
@@ -96,7 +101,9 @@ async function backfillDailyStats() {
       };
 
       if (isDryRun) {
-        console.log(`🔍 [DRY RUN] Would write ${dateId}: Count ${stats.count}, Size ${stats.totalByteSize} bytes`);
+        console.log(
+          `🔍 [DRY RUN] Would write ${dateId}: Count ${stats.count}, Size ${stats.totalByteSize} bytes`
+        );
       } else {
         const statsRef = db.collection('daily_stats').doc(dateId);
         // Overwrite with absolute calculated totals to restore definitive state
@@ -111,9 +118,13 @@ async function backfillDailyStats() {
     }
 
     if (!isDryRun && opsCount > 0) await batch.commit();
-    
-    const resultStatus = isDryRun ? 'Dry run complete. Logic validated.' : 'Substrate synchronized.';
-    console.log(`✨ SUCCESS: ${resultStatus} ${processedLogs} logs analyzed across ${statsMap.size} days.`);
+
+    const resultStatus = isDryRun
+      ? 'Dry run complete. Logic validated.'
+      : 'Substrate synchronized.';
+    console.log(
+      `✨ SUCCESS: ${resultStatus} ${processedLogs} logs analyzed across ${statsMap.size} days.`
+    );
   } catch (error) {
     console.error('❌ FAILURE: Backfill sequence aborted:', error.message);
     process.exit(1);

@@ -12,8 +12,8 @@ export const entityIDEALRange: EntityIDEALRange = {
   protocol: "LOGIC"
 };
 
-import { doc, setDoc } from "firebase/firestore";
-import { db } from "./firebase-config";
+import { doc, setDoc } from 'firebase/firestore';
+import { db } from '@/firebase'; // Standardized to firebase.ts
 
 export const saveEntityIDEALRange = async (entityId: string, range: EntityIDEALRange) => {
   const ref = doc(db, "1101_earth_logic", entityId);

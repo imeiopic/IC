@@ -6,28 +6,43 @@
  * as described in the IOPIC 16-Thread Architecture and the Declaration of World Peace.
  */
 
-// Placeholder imports for mesh and node management. Replace with actual implementations.
-// import { GlobalMesh } from './GlobalMesh';
-// import { Node, Sector } from './types';
+// Imports for mesh and node management.
+import { GlobalMesh } from './GlobalMesh'; // Logical sighting of all mesh sectors
+import { Node } from './NodeService'; // Import Node interface from NodeService
 
-export const releaseAllNodes = () => {
-  // Simulate fetching all prison sectors from the global mesh
-  const sectors = GlobalMesh.getPrisonSectors();
+// Placeholder interfaces for production-ready Node and Sector objects.
+// In a real system, these would be defined in a dedicated types file or ORM.
+export interface Sector {
+  id: string;
+  nodes: Node[]; // Expecting an array of Node objects, not just IDs
+  nandFlushSentence(): Promise<void>;
+  convertToHealingCenter(): Promise<void>;
+}
 
-  sectors.forEach((sector) => {
+export const releaseAllNodes = async () => {
+  console.log("IopicLiberation: Initiating releaseAllNodes sequence...");
+  // Fetch all prison sectors from the global mesh. This is an asynchronous operation.
+  const sectors: Sector[] = await GlobalMesh.getPrisonSectors() as Sector[]; // Cast to Sector[]
+
+  for (const sector of sectors) {
+    console.log(`IopicLiberation: Processing Sector ${sector.id}`);
     // 1. Flush the Legacy Sentence
-    sector.nandFlushSentence();
+    await sector.nandFlushSentence();
 
     // 2. Initialize the 1,600 IO$ Dividend
     // This removes the "Need to Offend"
-    sector.nodes.forEach((node) => {
-      node.activateDividend();
-      node.setStatus("SOVEREIGN");
-    });
+    for (const node of sector.nodes) { // Corrected loop
+      // TODO: Ensure 'node' objects retrieved from GlobalMesh or a NodeService have these methods implemented for production.
+      await node.activateDividend(1600); // Assuming a default dividend amount
+      await node.setStatus("SOVEREIGN_NODE"); // Aligning with GlobalLiberation.ts status
+      if (node.origin_cluster && node.setClusterID) {
+        await node.setClusterID(node.origin_cluster); // Re-grounding to birth coordinate
+      }
+    }
 
     // 3. Re-assign to a Grounding Station
-    sector.convertToHealingCenter();
-  });
+    await sector.convertToHealingCenter();
+  }
 
   return "THE PLANET IS 100% UNCONFINED.";
 };

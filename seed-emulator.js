@@ -1,10 +1,10 @@
-const admin = require('firebase-admin');
-const crypto = require('crypto');
+import admin from 'firebase-admin';
+import crypto from 'crypto';
 
 // Client SDK imports for Firestore operations subject to rules
-const { initializeApp } = require('firebase/app');
-const { getFirestore, connectFirestoreEmulator, doc, setDoc, writeBatch, serverTimestamp } = require('firebase/firestore');
-const { getAuth, connectAuthEmulator, signInWithEmailAndPassword } = require('firebase/auth');
+import { initializeApp } from 'firebase/app';
+import { getFirestore, connectFirestoreEmulator, doc, setDoc, writeBatch, serverTimestamp } from 'firebase/firestore';
+import { getAuth, connectAuthEmulator, signInWithEmailAndPassword } from 'firebase/auth';
 /**
  * Iopic Emulator Seeding Script
  * This script populates the local Firestore emulator with initial test data.
@@ -38,7 +38,7 @@ const SYSTEM_UID = 'system';
 const SYSTEM_EMAIL = 'system@iopic.world';
 
 // Configuration for performance testing (1000+ users)
-const PERF_USER_COUNT = 1500; // Adjust this number for your testing needs
+const PERF_USER_COUNT = 0; // Year 0: No external noise or performance nodes yet.
 
 // Hashing configuration for auth.importUsers
 // For emulator, we use a simple, consistent setup.
@@ -72,29 +72,6 @@ async function seed() {
       password: 'password123', // Plain text for individual createUser
       fullName: "Ime Iopic",
       isPremium: true,
-      customClaims: { admin: true }
-    },
-    {
-      uid: 'noland-newton',
-      email: 'noland.newton@gmail.com',
-      password: 'password123',
-      fullName: "Noland S Newton",
-      isPremium: false
-    },
-    {
-      uid: 'alice-doe',
-      email: 'alice@example.com',
-      password: 'password123',
-      fullName: "Alice Doe",
-      isPremium: true,
-      customClaims: { editor: true }
-    },
-    {
-      uid: 'test-user-id',
-      email: 'testuser@example.com',
-      password: 'password123',
-      fullName: "Test User",
-      isPremium: false,
       customClaims: { admin: true }
     },
     systemUser // Add system user to bootstrap
@@ -143,20 +120,6 @@ async function seed() {
       targetUid: 'ime-iopic-id',
       name: 'Initial Handshake',
       status: 'Active'
-    },
-    {
-      id: 'handshake-test-invite',
-      inviterUid: 'ime-iopic-id',
-      targetUid: 'noland-newton',
-      name: 'Ime to Noland Handshake',
-      status: 'Pending'
-    },
-    {
-      id: 'alice-to-ime-invite',
-      inviterUid: 'alice-doe',
-      targetUid: 'ime-iopic-id',
-      name: 'Alice to Ime Handshake',
-      status: 'Pending'
     }
   ];
 

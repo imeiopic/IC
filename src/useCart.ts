@@ -1,24 +1,36 @@
-import { ref, onUnmounted } from 'vue';
+import { ref } from 'vue'; // Removed onUnmounted
 import { collection, addDoc, doc, setDoc, getDoc, updateDoc, onSnapshot } from 'firebase/firestore';
-import { db } from '../firebase-config';
-import { useAuth } from '../src/useAuth';
+import { db } from '../firebase'; // Standardized to firebase.ts
+import { useAuth } from '../useAuth'; // Corrected path for useAuth
 
 export function useCart(sellerId: string) {
   const { user } = useAuth();
   const cart = ref<any[]>([]);
-  let unsub: (() => void) | null = null;
 
   // Listen to cart changes for this user and seller
-  function listenCart() {
-    if (!user.value) return;
+  /**
+   * Starts listening to cart changes for this user and seller.
+   * Returns an unsubscribe function.
+   */
+  function listenCart(): (() => void) | undefined { // Explicitly return the unsubscribe function
+    // The unsubscribe function is now returned by listenCart,
+    // allowing the caller (e.g., a Pinia store) to manage its lifecycle.
+    // This ensures the listener is not tied to a component's lifecycle
+    // and can be managed explicitly by a global state manager like Pinia.
+
+    if (!user.value) {
+      console.warn("useCart: Cannot listen to cart, no user authenticated.");
+      return undefined;
+    }
     const cartDoc = doc(db, 'shopping_carts', `${user.value.uid}_${sellerId}`);
-    unsub = onSnapshot(cartDoc, (snap) => {
+    const unsub = onSnapshot(cartDoc, (snap) => { // Use const for unsub
       if (snap.exists()) {
         cart.value = snap.data().items || [];
       } else {
         cart.value = [];
       }
     });
+    return unsub;
   }
 
   async function addToCart(item: any) {
@@ -51,10 +63,6 @@ export function useCart(sellerId: string) {
     await updateDoc(cartDoc, { items: [] });
     // Optionally, create an order document here
   }
-
-  onUnmounted(() => {
-    if (unsub) unsub();
-  });
 
   return { cart, addToCart, removeFromCart, checkout, listenCart };
 }

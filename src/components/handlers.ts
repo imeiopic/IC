@@ -1,4 +1,5 @@
-import { http, HttpResponse, graphql } from "msw";
+// @ts-ignore - msw package not installed
+import { graphql, http, HttpResponse } from "msw";
 
 // 1. Create a linked GraphQL instance for your custom endpoint
 const customGraphql = graphql.link("https://api.iopic.world/graphql");

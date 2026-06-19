@@ -1,152 +1,215 @@
 <template>
-  <CContainer fluid class="seller-substrate p-4 bg-black min-vh-100 font-mono text-white">
-    <header class="d-flex justify-content-between align-items-center mb-5 border-bottom border-zinc-800 pb-3">
+  <CContainer fluid class="seller-dashboard p-4 bg-black min-vh-100 font-mono text-white">
+    <header
+      class="d-flex justify-content-between align-items-center mb-4 border-bottom border-zinc-800 pb-3"
+    >
       <div class="brand d-flex align-items-center gap-3">
-        <i class="bi bi-tag text-success h3 m-0"></i>
-        <h1 class="text-glow text-success m-0 italic font-black">MARKET_DISTRIBUTION</h1>
+        <i class="bi bi-shop text-warning h3 m-0"></i>
+        <h1 class="text-glow text-warning m-0 italic font-black">SELLER_DASHBOARD</h1>
       </div>
-      <div class="node-status tiny text-zinc-500">
-        SELLER_NODE: {{ user?.uid.substring(0, 8) }}
+      <div class="equity-status text-end">
+        <span class="tiny text-zinc-500 d-block">LIQUID_EQUITY</span>
+        <span class="text-success fw-bold">{{ userEquity }} IO$</span>
       </div>
     </header>
 
     <CRow>
-      <CCol lg="5">
-        <CCard class="bg-zinc-900 border-zinc-800 text-white shadow-glow mb-4">
-          <CCardHeader class="bg-zinc-800 border-0 font-black italic py-3">
-            04_GROUND_NEW_RESOURCE
-          </CCardHeader>
-          <CCardBody class="p-4">
-            <CForm @submit.prevent="groundResource">
-              <div class="mb-3">
-                <label class="tiny text-zinc-500 uppercase mb-2">Resource_Name</label>
-                <CFormInput v-model="form.name" placeholder="e.g. 5G_NODE_ACCESS" class="bg-black border-zinc-800 text-info" required />
-              </div>
+      <CCol lg="12">
+        <CCard class="bg-zinc-900 border-warning text-white shadow-glow">
+          <CCardHeader class="font-black italic text-warning">INCOMING_ORDERS</CCardHeader>
+          <CCardBody>
+            <div v-if="sellerOrders.length > 0">
+              <div
+                v-for="order in sellerOrders"
+                :key="order.id"
+                class="mb-4 pb-3 border-bottom border-zinc-800"
+              >
+                <div class="d-flex justify-content-between small mb-1">
+                  <span class="text-zinc-500">ORDER_ID:</span>
+                  <span class="font-mono">{{ order.id.substring(0, 8) }}...</span>
+                </div>
+                <div class="d-flex justify-content-between small mb-1">
+                  <span class="text-zinc-500">BUYER:</span>
+                  <span class="text-info">{{ order.buyerID.substring(0, 8) }}...</span>
+                </div>
+                <div class="mb-2">
+                  <span class="text-zinc-500 small d-block">ITEMS:</span>
+                  <ul class="list-unstyled ms-3">
+                    <li v-for="item in order.items" :key="item.id" class="small text-zinc-400">
+                      - {{ item.name }} ({{ item.price }} IO$)
+                    </li>
+                  </ul>
+                </div>
+                <div class="d-flex justify-content-between small mb-1">
+                  <span class="text-zinc-500">STATUS:</span>
+                  <span
+                    :class="{
+                      'text-warning': order.status === 'pending',
+                      'text-info': order.status === 'paid',
+                      'text-success': order.status === 'shipped',
+                    }"
+                    >{{ order.status.toUpperCase() }}</span
+                  >
+                </div>
+                <div class="d-flex justify-content-between fw-bold mt-2">
+                  <span>TOTAL:</span>
+                  <span class="text-success">{{ order.totalAmount }} IO$</span>
+                </div>
 
-              <div class="mb-3">
-                <label class="tiny text-zinc-500 uppercase mb-2">Category</label>
-                <CFormSelect v-model="form.category" class="bg-black border-zinc-800 text-white">
-                  <option value="HARDWARE">HARDWARE</option>
-                  <option value="DATA_STREAM">DATA_STREAM</option>
-                  <option value="SPATIAL_UTILITY">SPATIAL_UTILITY</option>
-                  <option value="CONSULT_THREAD">CONSULT_THREAD</option>
-                </CFormSelect>
+                <div class="mt-3 d-flex gap-2">
+                  <CButton
+                    v-if="order.status === 'paid'"
+                    color="info"
+                    size="sm"
+                    @click="updateOrderStatus(order.id, 'shipped')"
+                    :disabled="isProcessing"
+                    >MARK_SHIPPED</CButton
+                  >
+                  <CButton
+                    v-if="order.status === 'shipped'"
+                    color="success"
+                    size="sm"
+                    @click="updateOrderStatus(order.id, 'delivered')"
+                    :disabled="isProcessing"
+                    >MARK_DELIVERED</CButton
+                  >
+                  <CButton v-if="order.status === 'pending'" color="secondary" size="sm" disabled
+                    >AWAITING_PAYMENT</CButton
+                  >
+                </div>
               </div>
-
-              <div class="mb-3">
-                <label class="tiny text-zinc-500 uppercase mb-2">Price_Anchor (IO$)</label>
-                <CFormInput v-model.number="form.price" type="number" class="bg-black border-zinc-800 text-success fw-bold" required />
-              </div>
-
-              <div class="mb-4">
-                <label class="tiny text-zinc-500 uppercase mb-2">Manifest_Description</label>
-                <CFormTextarea v-model="form.description" rows="3" class="bg-black border-zinc-800 text-zinc-400 small" placeholder="Define the utility of this resource..."></CFormTextarea>
-              </div>
-
-              <CButton type="submit" color="success" class="w-100 py-3 font-black italic shadow-success" :disabled="isGrounding">
-                <span v-if="!isGrounding">GROUND_TO_MARKETPLACE</span>
-                <span v-else class="vibrate">WRITING_MANIFEST...</span>
-              </CButton>
-            </CForm>
+            </div>
+            <div v-else class="text-center py-4 opacity-25">NO_INCOMING_ORDERS</div>
           </CCardBody>
         </CCard>
-      </CCol>
-
-      <CCol lg="7">
-        <h5 class="text-zinc-500 tiny uppercase mb-3 px-2">Active_Inventory_Sightings</h5>
-        <div class="inventory-grid">
-          <div v-if="myItems.length === 0" class="text-center py-5 bg-zinc-900 border border-zinc-800 rounded opacity-25 italic">
-            NO_RESOURCES_GROUNDED_YET
-          </div>
-          <CCard v-for="item in myItems" :key="item.id" class="bg-zinc-900 border-zinc-800 mb-2 transition-all">
-            <CCardBody class="d-flex justify-content-between align-items-center py-2 px-3">
-              <div>
-                <span class="text-success fw-bold me-3">{{ item.price }} IO$</span>
-                <span class="text-white small font-black">{{ item.name }}</span>
-                <span class="ms-3 tiny text-zinc-600 font-mono">[{{ item.category }}]</span>
-              </div>
-              <div class="d-flex gap-2">
-                <CButton color="danger" variant="ghost" size="sm" class="tiny" @click="delistItem(item.id)">
-                  DELIST
-                </CButton>
-              </div>
-            </CCardBody>
-          </CCard>
-        </div>
       </CCol>
     </CRow>
   </CContainer>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
-import { db, auth } from '../firebase';
-import { collection, addDoc, query, where, onSnapshot, doc, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { ref, onMounted, onUnmounted } from 'vue';
+import { db, auth } from '../firebase'; // Assuming firebase.ts is in the parent directory
+import {
+  collection,
+  query,
+  onSnapshot,
+  doc,
+  updateDoc,
+  where,
+  serverTimestamp,
+  type Unsubscribe,
+} from 'firebase/firestore';
+import { useErrorStore } from '../stores/error'; // Import error store
+import { useSuccessStore } from '../stores/success'; // Import success store
 
-const user = ref(auth.currentUser);
-const isGrounding = ref(false);
-const myItems = ref<any[]>([]);
-
-const form = ref({
-  name: '',
-  category: 'HARDWARE',
-  price: 100,
-  description: ''
-});
+// SYSTEM STATE
+const sellerOrders = ref<any[]>([]);
+const isProcessing = ref(false);
+const userEquity = ref(0);
+// Composables
+// Pinia Stores
+const errorStore = useErrorStore();
+const successStore = useSuccessStore();
+// Firestore Unsubscribe functions
+let ordersUnsubscribe: Unsubscribe | null = null;
+let userEquityUnsubscribe: Unsubscribe | null = null;
 
 /**
- * 01_SIGHTING_MY_INVENTORY
+ * Initialize subscriptions for seller's orders and equity.
  */
-const initInventoryStream = () => {
-  if (!auth.currentUser) return;
-  const q = query(collection(db, 'marketplace'), where('sellerID', '==', auth.currentUser.uid));
-  onSnapshot(q, (snapshot) => {
-    myItems.value = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+const initSellerSubstrates = () => {
+  if (!auth.currentUser) {
+    errorStore.setGlobalError('AUTHENTICATION_REQUIRED: Please log in as a seller.'); // Use errorStore
+    return;
+  }
+
+  // Listen for seller's orders
+  ordersUnsubscribe = onSnapshot(
+    query(collection(db, 'orders'), where('sellerID', '==', auth.currentUser.uid)),
+    (snapshot) => {
+      sellerOrders.value = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    },
+    (error) => {
+      console.error('Error fetching seller orders:', error);
+      errorStore.setGlobalError('Failed to load incoming orders.'); // Use errorStore
+    }
+  );
+
+  // Listen for Seller Equity Pulse (similar to Buyer)
+  userEquityUnsubscribe = onSnapshot(doc(db, 'users', auth.currentUser.uid), (doc) => {
+    if (doc.exists()) userEquity.value = doc.data().iowb?.balance || 0;
+    else {
+      userEquity.value = 0;
+      errorStore.setGlobalError('USER_EQUITY_NOT_FOUND: Please ensure your profile is complete.'); // Use errorStore
+    }
   });
 };
 
 /**
- * 02_GROUND_RESOURCE
+ * Updates the status of a specific order.
+ * @param orderId The ID of the order to update.
+ * @param newStatus The new status to set (e.g., 'shipped', 'delivered').
  */
-const groundResource = async () => {
-  if (!auth.currentUser) return;
-  isGrounding.value = true;
-  try {
-    await addDoc(collection(db, 'marketplace'), {
-      sellerID: auth.currentUser.uid,
-      sellerNode: auth.currentUser.uid.substring(0, 8),
-      name: form.value.name,
-      category: form.value.category,
-      price: form.value.price,
-      description: form.value.description,
-      timestamp: serverTimestamp()
-    });
-    form.value = { name: '', category: 'HARDWARE', price: 100, description: '' };
-    alert("MANIFEST_GROUNDED: Resource is now visible in the marketplace.");
-  } catch (err) {
-    console.error("GROUNDING_FRACTURE:", err);
-  } finally {
-    isGrounding.value = false;
+const updateOrderStatus = async (orderId: string, newStatus: string) => {
+  if (!auth.currentUser) {
+    errorStore.setGlobalError('AUTHENTICATION_REQUIRED: Cannot update order status.');
+    return;
   }
-};
 
-const delistItem = async (id: string) => {
-  if (confirm("RECALL_RESOURCE: Are you sure you want to delist this item?")) {
-    await deleteDoc(doc(db, 'marketplace', id));
+  isProcessing.value = true;
+  try {
+    const orderRef = doc(db, 'orders', orderId);
+    await updateDoc(orderRef, {
+      status: newStatus,
+      updatedAt: serverTimestamp(), // Add a timestamp for when the status was updated
+    });
+    successStore.setSuccessMessage(
+      `ORDER_STATUS_UPDATE_SUCCESS: Order ${orderId} status changed to ${newStatus}.`
+    );
+    errorStore.clearGlobalError(); // Clear any previous error
+  } catch (err) {
+    console.error('ORDER_STATUS_UPDATE_FRACTURE:', err);
+    errorStore.setGlobalError(
+      `ORDER_STATUS_UPDATE_FAILED: Noise detected during status update for order ${orderId}.`
+    );
+  } finally {
+    isProcessing.value = false;
   }
 };
 
 onMounted(() => {
-  initInventoryStream();
+  initSellerSubstrates();
+});
+
+onUnmounted(() => {
+  ordersUnsubscribe?.();
+  userEquityUnsubscribe?.();
 });
 </script>
 
 <style scoped>
-.shadow-success { box-shadow: 0 0 25px rgba(40, 167, 69, 0.15) !important; }
-.transition-all { transition: all 0.2s ease; }
-.transition-all:hover { border-color: #28a745 !important; background-color: #050505 !important; }
-.vibrate { animation: jitter 0.1s infinite; }
-@keyframes jitter { 0% { transform: translate(1px, -1px); } 100% { transform: translate(-1px, 1px); } }
-.tiny { font-size: 0.65rem; }
-.font-black { font-weight: 900; }
+/* Add seller-specific styles here, similar to Buyer.vue */
+.seller-dashboard .text-warning {
+  color: #ffc107 !important; /* Example warning color */
+}
+.seller-dashboard .shadow-glow {
+  box-shadow: 0 0 30px rgba(255, 193, 7, 0.15) !important; /* Example glow for seller */
+}
+/* Re-use common styles from Buyer.vue or define new ones */
+.bg-zinc-950 {
+  background-color: #050505;
+}
+.font-black {
+  font-weight: 900;
+}
+.fw-black {
+  font-weight: 900;
+}
+.tiny {
+  font-size: 0.65rem;
+}
+.italic {
+  font-style: italic;
+}
 </style>

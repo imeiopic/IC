@@ -1,13 +1,24 @@
-import { beforeAll, afterEach, afterAll } from "vitest";
-import { server } from "./src/mocks/server";
+// c:/IO/IC/vitest.setup.ts
+import { beforeAll, afterAll } from 'vitest';
 
-// Start the server before all tests.
-// 'error' ensures Vitest throws if you make a request that doesn't have a handler.
-beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
+// Example: Setting up a mock for a global API or a database connection
+console.log('Global setup: Initializing test environment...');
 
-// Reset any request handlers that we may add during the tests,
-// so they don't leak into other tests.
-afterEach(() => server.resetHandlers());
+// Assigning to globalThis satisfies the TypeScript declaration in env.d.ts
+globalThis.myGlobalMock = {
+  someValue: 'initialized',
+  setup: () => console.log('myGlobalMock setup'),
+  teardown: () => console.log('myGlobalMock teardown')
+};
 
-// Clean up after the tests are finished.
-afterAll(() => server.close());
+beforeAll(() => {
+  // This code runs once before all test suites start
+  console.log('Global setup: Running beforeAll hook for all test suites.');
+  myGlobalMock.setup();
+});
+
+afterAll(() => {
+  // This code runs once after all test suites have finished
+  console.log('Global setup: Running afterAll hook for all test suites.');
+  myGlobalMock.teardown();
+});

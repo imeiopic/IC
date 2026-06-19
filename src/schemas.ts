@@ -26,3 +26,13 @@ export const accessRequestSchema = z.object({
 });
 
 export type AccessRequest = z.infer<typeof accessRequestSchema>;
+
+/**
+ * Schema for admin actions via Express API.
+ */
+export const adminActionSchema = z.object({
+  action: z.string().min(1),
+  payload: z.record(z.any()).optional(),
+});
+
+export type AdminAction = z.infer<typeof adminActionSchema>;

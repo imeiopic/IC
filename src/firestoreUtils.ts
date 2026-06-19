@@ -1,10 +1,11 @@
-import { 
-  onSnapshot, 
-  type Query, 
-  type DocumentReference, 
-  type FirestoreError, 
-  type QuerySnapshot, 
+import * as Sentry from '@sentry/vue';
+import {
+  onSnapshot,
+  type DocumentReference,
   type DocumentSnapshot,
+  type FirestoreError,
+  type Query,
+  type QuerySnapshot,
   type Unsubscribe,
 } from 'firebase/firestore';
 import { useError } from './useError';
@@ -19,6 +20,37 @@ export interface SafeSnapshotOptions {
   shouldReport?: (error: FirestoreError) => boolean;
   /** Whether to fire the callback when only metadata (like fromCache) changes. */
   includeMetadataChanges?: boolean;
+}
+
+/**
+ * monitorFirestore: Measures latency of a Firestore operation and records it as a Sentry breadcrumb.
+ */
+export async function monitorFirestore<T>(
+  opName: string,
+  path: string,
+  task: () => Promise<T>
+): Promise<T> {
+  const startTime = performance.now();
+  try {
+    const result = await task();
+    const duration = performance.now() - startTime;
+    Sentry.addBreadcrumb({
+      category: 'firestore.latency',
+      message: `Operation: ${opName}`,
+      level: 'info',
+      data: { path, duration: `${duration.toFixed(2)}ms` },
+    });
+    return result;
+  } catch (error) {
+    const duration = performance.now() - startTime;
+    Sentry.addBreadcrumb({
+      category: 'firestore.latency',
+      message: `Operation: ${opName} (Failed)`,
+      level: 'warning',
+      data: { path, duration: `${duration.toFixed(2)}ms`, error: error instanceof Error ? error.message : String(error) },
+    });
+    throw error;
+  }
 }
 
 /**
@@ -41,15 +73,31 @@ export function safeOnSnapshot(
   options: SafeSnapshotOptions = {}
 ): Unsubscribe {
   const { reportError } = useError();
-
-  return onSnapshot(ref, { includeMetadataChanges: options.includeMetadataChanges }, onNext, (err) => {
+  const startTime = performance.now();
+  let hasReceivedFirstSnapshot = false;
+  
+  // Wrap onNext to capture the latency of the initial data fetch.
+  const monitoredNext = (snapshot: any) => {
+    if (!hasReceivedFirstSnapshot) {
+      const duration = performance.now() - startTime;
+      const path = ref.path || (ref.type === 'query' ? 'Query' : 'Unknown Path');
+      Sentry.addBreadcrumb({
+        category: 'firestore.latency',
+        message: `Initial snapshot received: ${path}`,
+        level: 'info',
+        data: { duration: `${duration.toFixed(2)}ms` },
+      });
+      hasReceivedFirstSnapshot = true;
+    }
+    onNext(snapshot);
+  };
+  
+  return onSnapshot(ref, { includeMetadataChanges: options.includeMetadataChanges }, monitoredNext, (err) => {
     // 1. Execute local error handler if provided
     options.onError?.(err);
-    
     // 2. Determine if we should escalate to the global error boundary.
     // By default, we report unless a shouldReport condition returns false.
     const shouldReport = options.shouldReport ? options.shouldReport(err) : true;
-    
     if (shouldReport) {
       reportError(err);
     }

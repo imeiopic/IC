@@ -1,7 +1,5 @@
-
-
-import { doc, setDoc, serverTimestamp } from "firebase/firestore";
-import { db } from "./firebase-config";
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from './firebase'; // Standardized to firebase.ts
 
 // Firestore Path: /0110_entities/{entityId}
 export interface EntityDomain {
@@ -13,9 +11,8 @@ export interface EntityDomain {
   status: string;
 }
 
-
 export async function saveEntityDomain(entityId: string, entityDomain: EntityDomain) {
-  const ref = doc(db, "0110_entities", entityId);
+  const ref = doc(db, '0110_entities', entityId);
   await setDoc(ref, entityDomain);
 }
 
@@ -24,12 +21,12 @@ export const createInstance = async (
   memberId: string,
   location: { x: number; y: number; z: number }
 ) => {
-  const instanceRef = doc(db, "0001_instances", memberId);
+  const instanceRef = doc(db, '0001_instances', memberId);
   await setDoc(instanceRef, {
-    thread: "0001",
-    status: "CONNECTED", // Fulfills 0011
+    thread: '0001',
+    status: 'CONNECTED', // Fulfills 0011
     timestamp: serverTimestamp(), // Represents 'TIME' from your 4D concept
-    location,
+    location
   });
-  console.log("Logical Digital Reality Initiated.");
+  console.log('Logical Digital Reality Initiated.');
 };

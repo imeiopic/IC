@@ -1,0 +1,59 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+  
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    // Collection: users
+    // Document ID: {userId} (matches request.auth.uid)
+    // Fields:
+    //   - isAdmin: bool (Controls admin clearance)
+    //   - lastPaymentStatus: string ('failed', 'acknowledged', 'resolved_by_admin')
+    //   - lastPaymentError: string
+    //   - iowb: map (balance, tierColor, isGrounded)
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function isAdmin() {
+      // Checks if the user has an admin custom claim (from your backend) 
+      // OR has the isAdmin flag set to true in their user document.
+      return isAuthenticated() && (
+        request.auth.token.admin == true ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true
+      );
+    }
+
+    // ===============================================================
+    // Collection Rules
+    // ===============================================================
+    match /users/{userId} {
+      // Read: Owners can read their own documents. Admins can read ALL users to populate the dashboard.
+      allow read: if isOwner(userId) || isAdmin();
+
+      // Create: Users can create their own profile, but CANNOT set themselves as admin.
+      allow create: if isOwner(userId) && 
+                    (!('isAdmin' in request.resource.data) || request.resource.data.isAdmin == false);
+
+      // Update: 
+      // 1. Admins can update any user document (e.g., resolving the ACH fracture).
+      // 2. Owners can update their own data, but we MUST block them from escalating their privileges.
+      allow update: if isAdmin() || 
+                    (isOwner(userId) && (!('isAdmin' in request.resource.data) || request.resource.data.isAdmin == resource.data.isAdmin));
+                    
+      // Delete: Standard users shouldn't be able to hard-delete ledger records. Admins only.
+      allow delete: if isAdmin();
+    }
+    
+  }
+}

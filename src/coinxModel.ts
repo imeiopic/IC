@@ -30,7 +30,8 @@ export interface CoinXContract {
   language: string;
   menu?: string[];   // For Buyer-Seller contracts: list of offerings
   order?: string[];  // For Buyer-Seller contracts: selected items
-  status: 'ACTIVE' | 'EXPIRED' | 'PENDING' | 'CANCELLED';
+  status: 'ACTIVE' | 'EXPIRED' | 'PENDING' | 'CANCELLED' | 'SYNCING';
+  metadata?: Record<string, any>; // For 16-thread bus specific attributes
 }
 
 export interface CoinX {
@@ -41,7 +42,18 @@ export interface CoinX {
   peerToPeer: boolean;
   commerceEnabled: boolean;
   trustedDataTypes: Array<'identity' | 'message' | 'voice' | 'video' | 'location'>;
+  resonanceFidelity: number; // Alignment to the 7.83Hz baseline
 }
+
+/**
+ * Validates if a CoinX's resonance fidelity meets the required systemic threshold.
+ * @param coinx The CoinX instance to validate.
+ * @param integrityThreshold The minimum fidelity required (typically from VRE.protocols).
+ * @returns True if the fidelity is within acceptable parameters.
+ */
+export const validateCoinXResonance = (coinx: CoinX, integrityThreshold: number): boolean => {
+  return coinx.resonanceFidelity >= integrityThreshold;
+};
 
 // Example CoinX for Person-to-Person (Communication)
 export const exampleCoinX01: CoinX = {
@@ -65,6 +77,7 @@ export const exampleCoinX01: CoinX = {
   peerToPeer: true,
   commerceEnabled: false,
   trustedDataTypes: ['identity', 'message', 'voice', 'video', 'location'],
+  resonanceFidelity: 1.0,
 };
 
 // Example CoinX for Buyer-to-Seller (Commerce)
@@ -91,4 +104,5 @@ export const exampleCoinX10: CoinX = {
   peerToPeer: true,
   commerceEnabled: true,
   trustedDataTypes: ['identity', 'message', 'voice', 'video', 'location'],
+  resonanceFidelity: 1.0,
 };

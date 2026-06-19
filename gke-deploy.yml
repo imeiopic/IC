@@ -1,0 +1,61 @@
+name: Deploy to GKE
+
+on:
+  # This ensures deployment only happens after a successful image build
+  workflow_run:
+    workflows: ["Build and Publish Docker Images"]
+    types:
+      - completed
+
+jobs:
+  deploy:
+    name: Deploy to GKE
+    runs-on: ubuntu-latest
+    # Only run if the previous build was successful and triggered from main or staging
+    if: ${{ github.event.workflow_run.conclusion == 'success' && (github.event.workflow_run.head_branch == 'main' || github.event.workflow_run.head_branch == 'staging') }}
+    environment: ${{ github.event.workflow_run.head_branch == 'main' && 'production' || 'staging' }}
+
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_WIF_SERVICE_ACCOUNT }}
+
+      - name: 'Debug WIF Identity'
+        run: |
+          echo "Checking authenticated identity..."
+          gcloud auth list
+          echo "Checking project configuration..."
+          gcloud config list
+
+      - name: Set up GKE Credentials
+        uses: google-github-actions/get-gke-credentials@v2
+        with:
+          cluster_name: ${{ vars.GKE_CLUSTER }}
+          location: ${{ vars.GKE_ZONE }}
+          project_id: ${{ vars.GCP_PROJECT_ID }}
+
+      - name: Prepare and Deploy Manifest
+        env:
+          FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
+          FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
+        run: |
+          # Re-calculate the IMAGE_TAG logic to match docker-publish.yml
+          VERSION=$(node -p "require('./package.json').version")
+          if [ "${{ github.event.workflow_run.head_branch }}" == "main" ]; then
+            export IMAGE_TAG=$VERSION
+          else
+            SHORT_SHA=$(git rev-parse --short ${{ github.event.workflow_run.head_sha }})
+            export IMAGE_TAG="${VERSION}-staging.${SHORT_SHA}"
+          fi
+          
+          # Inject secrets and the correct image tag into the manifest
+          envsubst < frontend-manifest.yaml | kubectl apply -f -

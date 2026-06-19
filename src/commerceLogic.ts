@@ -16,8 +16,8 @@ export const commerceLogic: CommerceLogic = {
   manifestation_result: "!" // Finalized Information
 };
 
-import { doc, setDoc } from "firebase/firestore";
-import { db } from "./firebase-config";
+import { doc, setDoc } from 'firebase/firestore';
+import { db } from '@/firebase'; // Standardized to firebase.ts
 
 export const saveCommerceLogic = async (transactionId: string, logic: CommerceLogic) => {
   const ref = doc(db, "1001_commerce", transactionId);

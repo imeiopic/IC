@@ -1,0 +1,46 @@
+name: Firebase Utility Scripts CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Install Firebase Tools
+        run: npm install -g firebase-tools
+
+      - name: Run Firestore Emulator and Validate Scripts
+        run: |
+          # Start the emulators in the background
+          # We use a demo-project ID to enable emulator-only mode
+          firebase emulators:exec --project demo-project-id "node seed-emulator.js --project-id demo-project-id --use-emulator --days 5 --logs-per-day 50 --seed-system-user && node firestore-local-test.js --project-id demo-project-id --use-emulator && node backfill-daily-stats.js --project-id demo-project-id --use-emulator --dry-run"
+        env:
+          G_CLOUD_PROJECT: demo-project-id
+          FIRESTORE_EMULATOR_HOST: '127.0.0.1:8080'
+          FIREBASE_AUTH_EMULATOR_HOST: '127.0.0.1:9099'
+
+      - name: Validate System User Creation Script
+        run: |
+          # Test the creation script against the emulator
+          node create-system-user.js system@example.com newTemporaryPassword123 --project-id demo-project-id --use-emulator
+        env:
+          G_CLOUD_PROJECT: demo-project-id
+          FIREBASE_AUTH_EMULATOR_HOST: '127.0.0.1:9099'
+          FIRESTORE_EMULATOR_HOST: '127.0.0.1:8080'

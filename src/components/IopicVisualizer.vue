@@ -21,7 +21,7 @@ import { useSystemBus } from '../composables/useSystemBus';
 
 const canvasRef = ref<HTMLCanvasElement | null>(null);
 const { analyserNode, ioLoad, playSFX } = useIOSettings();
-const { currentNoiseLevel, systemFriction, isGlobalPurgeActive, triggerGlobalPurge, isLowPower, energyProfile, toggleEnergyProfile, isStabilizing, prefersReducedMotion, isScreenReaderDetected, manualFocusMode, rebootSeconds, isIOsticAcknowledged, busThreads, addLog } = useSystemBus();
+const { currentNoiseLevel, systemFriction, isGlobalPurgeActive, triggerGlobalPurge, isLowPower, energyProfile, toggleEnergyProfile, isStabilizing, prefersReducedMotion, isScreenReaderDetected, manualFocusMode, rebootSeconds, isIOsticAcknowledged, busThreads, activeTraceBit, addLog } = useSystemBus() as any;
 let animationFrame: number;
 
 const isGlitching = ref(false);

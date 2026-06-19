@@ -25,6 +25,7 @@ coverage/
 *.njsproj
 *.sln
 *.sw?
+*.mp4
 
 # Environment variables
 .env
@@ -43,3 +44,4 @@ backups/
 
 # SSL Certificates
 ssl/
+/.ssl/

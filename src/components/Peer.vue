@@ -92,7 +92,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useRoute } from 'vue-router';
-import { db } from '../firebase'; // Resolved path to root
+import { db } from '@/firebase'; // Resolved path to root
 import { doc, onSnapshot, updateDoc, serverTimestamp, collection, query, where } from 'firebase/firestore';
 import { useAuth } from '../composables/useAuth';
 
@@ -108,7 +108,7 @@ const transferMsg = ref('');
 const localVideo = ref<HTMLVideoElement | null>(null);
 const localStream = ref<MediaStream | null>(null);
 
-const fromNode = computed(() => user.value?.uid?.substring(0, 12) || 'LOADING...');
+const fromNode = computed(() => (user.value as any)?.uid?.substring(0, 12) || 'LOADING...');
 
 const validationChecks = ref([
   { id: 1, label: 'Spatiotemporal Anchor Verified', verified: false },
@@ -160,7 +160,7 @@ onMounted(() => {
 });
 
 async function confirmSymmetry() {
-  if (!pendingNode.value.id) return;
+  if (!pendingNode.value.id || !user.value) return;
   try {
     const userRef = doc(db, 'users', pendingNode.value.id);
     await updateDoc(userRef, {

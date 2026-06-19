@@ -1,6 +1,6 @@
 // src/notifyBackend.ts
 // Backend notification trigger for Email, SMS, Push
-import { apiFetch } from '../api';
+import { apiFetch } from './api';
 
 export async function notifyOrderStatus(orderId, status, channels, recipient) {
   // channels: ['email', 'sms', 'push']

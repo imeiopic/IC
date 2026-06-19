@@ -145,8 +145,8 @@
         <h3>Audit Result</h3>
         <div v-for="(d, i) in directives" :key="'r-' + d.id">
           Directive {{ d.id }}:
-          <span :class="{ aligned: answers[i] === 'yes', notAligned: answers[i] !== 'yes' }">
-            {{ answers[i] === 'yes' ? 'ALIGNED' : 'NOT ALIGNED' }}
+          <span v-if="answers" :class="{ aligned: answers[i] === 'yes', notAligned: answers[i] !== 'yes' }">
+            {{ answers && answers[i] === 'yes' ? 'ALIGNED' : 'NOT ALIGNED' }}
           </span>
         </div>
         <div class="final-status">
@@ -201,11 +201,11 @@ const meshNodes = ref<any[]>([]);
 const nodeName = ref('');
 const showRegistration = ref(false);
 const faceImage = ref('');
-const videoRef = ref(null);
+const videoRef = ref<HTMLVideoElement | null>(null);
 const voiceSample = ref('');
 const recordingAudio = ref(false);
 const recordingVoice = ref(false);
-const geolocation = ref(null);
+const geolocation = ref<{lat: number, lng: number} | null>(null);
 const geoError = ref('');
 const device = ref(navigator.userAgent);
 const loading = ref(true);
@@ -341,7 +341,7 @@ async function submitAudit() {
 }
 
 // Voice-to-text for name
-function startVoiceToText() {
+function startVoiceToText(event: Event) {
   const SpeechRecognition =
     (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
   if (!SpeechRecognition) {
@@ -375,7 +375,7 @@ function captureFace() {
   canvas.width = video.videoWidth;
   canvas.height = video.videoHeight;
   const ctx = canvas.getContext('2d');
-  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+  if (ctx) ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
   faceImage.value = canvas.toDataURL('image/png');
 }
 
@@ -404,8 +404,8 @@ function startVoiceRecording() {
   }
   recordingAudio.value = true;
   navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
-    mediaRecorder = new window.MediaRecorder(stream);
-    audioChunks = [];
+      const mediaRecorder = new window.MediaRecorder(stream);
+      const audioChunks: Blob[] = [];
     mediaRecorder.ondataavailable = (e) => {
       audioChunks.push(e.data);
     };
@@ -456,7 +456,7 @@ function setupWebSocket() {
       if (msg.type === 'direct-message' && msg.from && msg.text) {
         notifySuccess(`Direct message from ${msg.from}: ${msg.text}`);
       }
-    } catch {}
+    } catch (e) {}
   };
   ws.onerror = () => {
     error.value = 'Mesh sync error.';

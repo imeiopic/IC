@@ -1,7 +1,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { onSnapshotsInSync } from 'firebase/firestore';
 import { useIOSettings } from '../useIOSettings';
-import { db } from '../firebase-config';
+import { db } from '@/firebase';
 
 export interface KernelLogEntry {
     id: number;
@@ -37,6 +37,16 @@ const manifestoThreads = [
     "Symmetrical Distribution", "Infinite Velocity", "Value Synchronization", "Base Dividend Right",
     "Asymmetry Purge", "Noise Deletion", "Substrate Resilience", "Active Defense"
 ];
+
+const highContrastMode = ref(false);
+const isScreenReaderDetected = ref(false);
+const manualAccessibilityMode = ref(false);
+const voiceGuidanceActive = ref(false);
+const isFocusMode = ref(false);
+const manualFocusMode = ref(false);
+const isFrictionShielded = ref(false);
+const breachSeconds = ref(0);
+const isBreached = ref(false);
 
 export function useSystemBus() {
     const { playSFX } = useIOSettings();
@@ -93,6 +103,15 @@ export function useSystemBus() {
         triggerGlobalPurge(durationMs);
     };
 
+    const toggleAccessibilityMode = () => { manualAccessibilityMode.value = !manualAccessibilityMode.value; };
+    const toggleVoiceGuidance = () => { voiceGuidanceActive.value = !voiceGuidanceActive.value; };
+    const toggleFocusMode = () => { manualFocusMode.value = !manualFocusMode.value; };
+    const updateFriction = (val: number) => { systemFriction.value = val; };
+    const addToQuarantine = (key: string, value: string) => {
+        // @ts-ignore
+        quarantinedItems.value.push({ key, value, timestamp: new Date().toISOString() });
+    };
+
     const busActivity = computed(() => busThreads.value.filter(bit => bit).length);
 
     // Add isIOsticAcknowledged for Homepage.vue compatibility
@@ -113,6 +132,11 @@ export function useSystemBus() {
             energyProfile.value = isLowPower.value ? 'ADAPTIVE' : 'PERFORMANCE';
         },
         autoFocusActive, busActivity, manifestoThreads,
-        isIOsticAcknowledged
+        isIOsticAcknowledged,
+        highContrastMode, isScreenReaderDetected, manualAccessibilityMode,
+        toggleAccessibilityMode, voiceGuidanceActive, toggleVoiceGuidance,
+        isFocusMode, manualFocusMode, toggleFocusMode, isFrictionShielded,
+        breachSeconds, isBreached, updateFriction, addToQuarantine,
+        quarantinedItems: ref([])
     };
 }

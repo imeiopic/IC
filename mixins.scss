@@ -1,0 +1,15 @@
+/**
+ * Iopic Protocol: Global Mixins Substrate
+ */
+
+@mixin flex-center {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+@mixin glass-effect($blur: 12px, $opacity: 0.1) {
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur($blur);
+  border-bottom: 1px solid rgba(0, 229, 255, $opacity);
+}

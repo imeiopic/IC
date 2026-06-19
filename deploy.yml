@@ -37,10 +37,32 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
+      - name: Cache Build Artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            **/*.tsbuildinfo
+            node_modules/.vite
+          key: ${{ runner.os }}-build-cache-${{ hashFiles('package-lock.json', '**/tsconfig*.json') }}
+          restore-keys: |
+            ${{ runner.os }}-build-cache-${{ hashFiles('package-lock.json', '**/tsconfig*.json') }}-
+
+      - name: Optimize WebAssembly
+        id: wasm_opt
+        # This ensures the high-performance memory mapping in Self.vue uses the O3-optimized binary.
+        # Explicitly running this step provides better visibility in CI logs.
+        run: |
+          echo "WASM size before optimization:" && ls -lh src/sovereign_wasm.wasm
+          npm run wasm:optimize
+          echo "WASM size after optimization:" && ls -lh src/sovereign_wasm.wasm
+          WASM_HASH=$(sha256sum src/sovereign_wasm.wasm | cut -d ' ' -f 1)
+          echo "hash=$WASM_HASH" >> $GITHUB_OUTPUT
+
       - name: Build Project
         # Map GitHub Secrets to Environment Variables for Vite
         # These will now pull from the environment selected above!
         env:
+          EXPECTED_WASM_HASH: ${{ steps.wasm_opt.outputs.hash }}
           VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
           VITE_FIREBASE_AUTH_DOMAIN: ${{ vars.FIREBASE_AUTH_DOMAIN }}
           VITE_FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID }}

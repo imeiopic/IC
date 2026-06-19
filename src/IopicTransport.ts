@@ -1,56 +1,46 @@
 /**
  * THE SYMMETRICAL RIDE BOND
  * Logic: Connecting Node A to Node B via Mobile Resource C
- *
  * This module implements the Global Fleet Handshake, converting all legacy rideshare drivers
  * into Sovereign Transport Stewards within the IOPIC 16-Thread Architecture.
  */
 
-// Placeholder/mock implementations for demonstration. Replace with real logic as needed.
+import { RideService } from './RideService'; // Import the production-ready RideService
 
-// Simulated authentication and mesh
-const auth = {
-  currentUser: {
-    uid: "passenger-001",
-    coordinates: { lat: 37.7749, lng: -122.4194 },
-  },
-};
+export const initiateRide = async (destinationAddress: string) => {
+  console.log("IopicTransport: Initiating ride to destination:", destinationAddress);
 
-const GlobalMesh = {
-  findNearestSovereignDriver: (coordinates: { lat: number; lng: number }) => ({
-    uid: "driver-007",
-    coordinates: { lat: 37.775, lng: -122.418 },
-    status: "SOVEREIGN",
-  }),
-};
+  // 1. Get authenticated passenger
+  const passenger = await RideService.getCurrentUser();
+  if (!passenger) {
+    throw new Error("No authenticated passenger found.");
+  }
 
-function calculateMolecularMass(destination: string) {
-  // Simple mock: every ride is 20 IO$
-  return 20;
-}
+  // 2. Geocode the destination address
+  const destinationCoords = await RideService.geocodeAddress(destinationAddress);
+  if (!destinationCoords) {
+    throw new Error(`Could not determine coordinates for destination: ${destinationAddress}`);
+  }
 
-const OrderTaker = {
-  dispatch: (tripBond: any) => {
-    // Simulate dispatching the ride bond
-    return {
-      ...tripBond,
-      status: "BONDED",
-      timestamp: Date.now(),
-    };
-  },
-};
+  // 3. Find the nearest sovereign driver
+  const driver = await RideService.findNearestSovereignDriver(passenger.coordinates);
+  if (!driver) {
+    throw new Error("No sovereign driver available.");
+  }
 
-export const initiateRide = (destination: string) => {
-  const passenger = auth.currentUser;
-  const driver = GlobalMesh.findNearestSovereignDriver(passenger.coordinates);
+  // 4. Calculate the molecular mass (cost) of the trip
+  const cost = await RideService.calculateMolecularMass(passenger.coordinates, destinationCoords);
 
-  // Form the BS-MOLECULE for the trip
+  // 5. Form the BS-MOLECULE (trip bond) for the trip
   const tripBond = {
     buyer: passenger.uid,
     seller: driver.uid,
-    cost: calculateMolecularMass(destination), // Distance-based IO$
-    velocity: "8.09V",
+    destination: destinationAddress, // Store the human-readable destination
+    destinationCoords: destinationCoords, // Store the geocoded coordinates
+    cost: cost, // Distance-based IO$
+    velocity: "8.09V", // This might also be dynamically calculated
   };
 
-  return OrderTaker.dispatch(tripBond);
+  // 6. Dispatch the ride bond
+  return await RideService.dispatchRide(tripBond);
 };

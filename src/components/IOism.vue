@@ -49,12 +49,15 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
+import { useThemeStore } from '@/stores/themeStore';
 
 const memberCount = ref(1000000);
 const entropyLevel = ref(88);
 const absorptionProgress = ref(0);
 const currentStep = ref(0);
+const themeStore = useThemeStore();
+
 const isFlushing = ref(false);
 const clusterVelocity = ref(0.0);
 
@@ -65,8 +68,10 @@ const steps = [
   { action: 'SYNCING', desc: '1,600 IO$ Dividend Pulse' }
 ];
 
-const executeNandFlush = () => {
+const executeNandFlush = async () => {
   isFlushing.value = true;
+  // Switch theme during the flush process for visual feedback
+  themeStore.toggleTheme();
   let timer = setInterval(() => {
     if (absorptionProgress.value < 100) {
       absorptionProgress.value += 2;
@@ -82,12 +87,12 @@ const executeNandFlush = () => {
 };
 </script>
 
-<style scoped>
+<style lang="scss" scoped>
 .ioism-terminal {
-  background: #000;
-  color: #00e5ff; /* Symmetry Cyan */
+  background: $body-bg;
+  color: $secondary;
   padding: 2.5rem;
-  border: 1px solid #00e5ff;
+  border: 1px solid $secondary;
   font-family: 'Space Mono', monospace;
   max-width: 700px;
 }
@@ -110,11 +115,11 @@ const executeNandFlush = () => {
 }
 .val {
   font-size: 1.5rem;
-  color: #00e5ff;
+  color: $secondary;
 }
 .val-red {
   font-size: 1.5rem;
-  color: #ff0041;
+  color: $primary; // Matrix Green in Symmetry, Entropy Red in Entropy
 }
 
 .protocol-timeline {
@@ -124,12 +129,13 @@ const executeNandFlush = () => {
   display: flex;
   align-items: center;
   padding: 15px;
-  border-bottom: 1px solid #111;
+  border-bottom: 1px solid rgba($secondary, 0.1);
   opacity: 0.4;
+  transition: background-color var(--io-theme-transition), opacity 0.3s ease;
 }
 .step-row.active {
   opacity: 1;
-  background: rgba(0, 229, 255, 0.05);
+  background: color-mix(in srgb, $secondary, transparent 95%);
 }
 .step-num {
   font-size: 1.5rem;
@@ -161,7 +167,7 @@ const executeNandFlush = () => {
 }
 .progress-fill {
   height: 100%;
-  background: #7fff00;
+  background: var(--io-accent);
   transition: width 0.1s;
 }
 .label-overlay {
@@ -177,7 +183,7 @@ const executeNandFlush = () => {
 .flush-btn {
   width: 100%;
   padding: 1.5rem;
-  background: #00e5ff;
+  background: $secondary;
   color: #000;
   border: none;
   font-weight: bold;
@@ -194,7 +200,7 @@ const executeNandFlush = () => {
   font-size: 0.8rem;
 }
 .v-glow {
-  color: #7fff00;
-  text-shadow: 0 0 10px #7fff00;
+  color: var(--io-accent);
+  text-shadow: 0 0 10px var(--io-accent);
 }
 </style>

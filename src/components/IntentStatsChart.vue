@@ -42,7 +42,7 @@ import {
     BarElement,
     CategoryScale,
     LinearScale,
-    ChartOptions
+    type ChartOptions
 } from 'chart.js';
 
 ChartJS.register(Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale);

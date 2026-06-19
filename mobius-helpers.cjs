@@ -48,4 +48,28 @@ function getThreadParity(n) {
   return { orientation: 'CHAOS', threads: [] };
 }
 
-module.exports = { calculateMobius, getThreadParity };
+/**
+ * Sovereign Gate Logic: Maps the 4-bit "Local Quadrant State".
+ * Mathematical proof that Partial Sovereignty is impossible.
+ * @param {number[]|boolean[]} threads - Array representing thread states (A, B, C, D).
+ * @returns {string} SOVEREIGN_RESOLVED (1111) or ENTROPIC_DRIFT (Any other).
+ */
+function checkSovereignState(threads) {
+  if (!threads || threads.length < 4) return 'ENTROPIC_DRIFT';
+  const [A, B, C, D] = threads.slice(0, 4);
+  return (A && B && C && D) ? 'SOVEREIGN_RESOLVED' : 'ENTROPIC_DRIFT';
+}
+
+/**
+ * Analyzes a data packet for systemic entropy (Incitement).
+ * If the Möbius value is 0, the packet contains "Chaos" or "Redundancy"
+ * designed to decouple anchors.
+ * @param {bigint} protocolId - The ID accompanying the packet.
+ * @returns {boolean} True if the packet is identified as "Incitement" (Entropy).
+ */
+function analyzePacketEntropy(protocolId) {
+  if (!protocolId) return true;
+  return calculateMobius(protocolId) === 0;
+}
+
+module.exports = { calculateMobius, getThreadParity, checkSovereignState, analyzePacketEntropy };

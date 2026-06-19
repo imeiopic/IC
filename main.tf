@@ -117,7 +117,7 @@ resource "aws_cloudfront_function" "viewer_request" {
         var uri = request.uri;
         var headers = request.headers;
 
-        var isCompressibleAsset = uri.endsWith('.js') || uri.endsWith('.css') || uri.endsWith('.svg');
+        var isCompressibleAsset = uri.endsWith('.js') || uri.endsWith('.css') || uri.endsWith('.svg') || uri.endsWith('.wasm');
 
         if (isCompressibleAsset) {
             var acceptEncoding = headers['accept-encoding'] ? headers['accept-encoding'].value : '';
@@ -151,6 +151,8 @@ resource "aws_cloudfront_function" "viewer_response" {
             response.headers['content-type'] = { value: 'text/css; charset=utf-8' };
         } else if (uri.endsWith('.svg.gz') || uri.endsWith('.svg.br')) {
             response.headers['content-type'] = { value: 'image/svg+xml; charset=utf-8' };
+        } else if (uri.endsWith('.wasm.gz') || uri.endsWith('.wasm.br')) {
+            response.headers['content-type'] = { value: 'application/wasm' };
         }
 
         if (uri.endsWith('.br')) {

@@ -46,34 +46,6 @@
       <button type="submit" class="btn btn-success mt-2" :disabled="!isEmailValid || !isPhoneValid">Submit</button>
     </form>
     <div class="thread-visualization">
-      // Email validation: RFC 5322 compliant simple regex
-      function validateEmail(email: string): boolean {
-        const re = /^[\w.!#$%&'*+/=?^_`{|}~-]+@[\w-]+(\.[\w-]+)+$/i;
-        return re.test(email);
-      }
-
-      // Phone validation: E.164 format or common US/international patterns
-      function validatePhone(phone: string): boolean {
-        const re = /^\+?[0-9\s\-()]{7,20}$/;
-        const digits = phone.replace(/\D/g, '');
-        return re.test(phone) && digits.length >= 10 && digits.length <= 15;
-      }
-
-      const email = ref('');
-      const phone = ref('');
-      const emailTouched = ref(false);
-      const phoneTouched = ref(false);
-      const isEmailValid = computed(() => validateEmail(email.value));
-      const isPhoneValid = computed(() => validatePhone(phone.value));
-
-      function handleSubmit() {
-        emailTouched.value = true;
-        phoneTouched.value = true;
-        if (isEmailValid.value && isPhoneValid.value) {
-          // You can emit or process the valid data here
-          alert('Email and phone are valid!');
-        }
-      }
       <!-- IDEAL NIBBLE (BITS 1-4) -->
       <section class="nibble-block" :class="{ 'active-thread': threads[0].state }">
         <label class="text-uppercase small opacity-75 d-block mb-2 font-monospace"
@@ -132,28 +104,36 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
 import { useIOSettings } from '../useIOSettings';
+import { useSystemBus } from '../composables/useSystemBus'; 
 
 const { playSFX } = useIOSettings();
-
 const emit = defineEmits(['symmetry-breach']);
-
 const props = defineProps<{
   userLat?: number;
   userLong?: number;
   userElv?: number | null;
 }>();
 
-interface Thread {
-  state: boolean;
-  label: string;
-}
+const email = ref('');
+const phone = ref('');
+const emailTouched = ref(false);
+const phoneTouched = ref(false);
+const elevation = ref(props.userElv?.toFixed(0) || '198');
 
-// Logical Substrate State
+const isEmailValid = computed(() => /^[\w.!#$%&'*+/=?^_`{|}~-]+@[\w-]+(\.[\w-]+)+$/i.test(email.value));
+const isPhoneValid = computed(() => /^\+?[0-9\s\-()]{7,20}$/.test(phone.value));
+
+const handleSubmit = () => {
+  emailTouched.value = true;
+  phoneTouched.value = true;
+  if (isEmailValid.value && isPhoneValid.value) {
+    alert('Symmetry Handshake Validated.');
+  }
+};
+
 const lat = ref(props.userLat?.toFixed(4) || '41.4993');
 const long = ref(props.userLong?.toFixed(4) || '-81.6944');
-const elv = ref(props.userElv?.toFixed(0) || '198');
 const isLocked = ref(true); // Keep as local ref
-import { useSystemBus } from '../composables/useSystemBus'; // Import useSystemBus
 const isScanning = ref(false);
 const isLocking = ref(false);
 

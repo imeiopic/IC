@@ -79,14 +79,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue';
-import { useRouter } from 'vue-router';
-import { CContainer, CButton, CSpinner } from '@coreui/vue';
-import { db, auth, rtdb } from '../firebase';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { getFaceDescriptor, loadFaceModels } from '@/composables/FaceAuth';
+import { getGeolocation } from '@/composables/GeoTools';
+import { auth, db, rtdb } from '@/firebase';
+import { CButton, CContainer, CSpinner } from '@coreui/vue';
 import { ref as dbRef, onValue } from 'firebase/database';
-import { loadFaceModels, getFaceDescriptor } from '../composables/FaceAuth';
-import { getGeolocation } from '../composables/GeoTools';
+import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
+import { onMounted, onUnmounted, ref } from 'vue';
+import { useRouter } from 'vue-router';
 
 const router = useRouter();
 const step = ref(1);

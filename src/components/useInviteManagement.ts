@@ -1,7 +1,6 @@
 import { ref } from 'vue';
 import { collection, addDoc } from 'firebase/firestore';
-import { getAuth } from 'firebase/auth';
-import { db } from '../firebase-config';
+import { auth, db } from '../firebase';
 
 export function useInviteManagement() {
   const newName = ref('');
@@ -13,7 +12,6 @@ export function useInviteManagement() {
     if (!newName.value.trim()) return;
     isSubmitting.value = true;
     try {
-      const auth = getAuth();
       const currentUser = auth.currentUser;
       
       await addDoc(collection(db, 'invitees'), {

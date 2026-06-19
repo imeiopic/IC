@@ -4,8 +4,8 @@ metadata:
   name: frontend-secrets
 type: Opaque
 stringData:
-  FIREBASE_API_KEY: "AIzaSy...prod-key"
-  FIREBASE_APP_ID: "1:1234567890:web:abcdef123456"
+  FIREBASE_API_KEY: "${FIREBASE_API_KEY}" # To be replaced by CI/CD
+  FIREBASE_APP_ID: "${FIREBASE_APP_ID}"
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -25,6 +25,7 @@ metadata:
   name: iopic-frontend
 spec:
   replicas: 2
+  revisionHistoryLimit: 5
   selector:
     matchLabels:
       app: iopic-frontend
@@ -33,14 +34,78 @@ spec:
       labels:
         app: iopic-frontend
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
       containers:
         - name: frontend
-          image: ghcr.io/your-org/iopic-frontend:latest
+          image: ghcr.io/your-org/iopic-frontend:${IMAGE_TAG}
           ports:
             - containerPort: 80
-          # Inject the ConfigMap as environment variables
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "500m"
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
           envFrom:
             - configMapRef:
                 name: frontend-config
             - secretRef:
                 name: frontend-secrets
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: iopic-frontend-hpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: iopic-frontend
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 0
+      policies:
+        - type: Percent
+          value: 100
+          periodSeconds: 15
+        - type: Pods
+          value: 4
+          periodSeconds: 15
+      selectPolicy: Max
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+        - type: Percent
+          value: 100
+          periodSeconds: 15

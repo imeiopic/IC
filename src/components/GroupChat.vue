@@ -10,9 +10,9 @@
 
     <div class="message-thread flex-grow-1 p-3 overflow-auto" ref="threadScroll">
       <div v-for="(msg, i) in messages" :key="i" 
-           :class="['msg-bubble mb-3 d-flex flex-column', msg.senderId === user.uid ? 'align-items-end' : 'align-items-start']">
+           :class="['msg-bubble mb-3 d-flex flex-column', user?.uid && msg.senderId === user.uid ? 'align-items-end' : 'align-items-start']">
         <span class="tiny text-zinc-500 font-mono mb-1">{{ msg.senderName }}</span>
-        <div :class="['p-2 rounded-3 small border', msg.senderId === user.uid ? 'bg-gold text-black border-gold' : 'bg-black text-white border-zinc-700']">
+        <div :class="['p-2 rounded-3 small border', user?.uid && msg.senderId === user.uid ? 'bg-gold text-black border-gold' : 'bg-black text-white border-zinc-700']">
           {{ msg.text }}
         </div>
       </div>
@@ -36,11 +36,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch, nextTick } from 'vue';
-import { db } from './firebase';
-import { collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp, doc, getDoc } from 'firebase/firestore';
-import { useAuth } from './useAuth';
+import { db } from '@/firebase';
+import { useAuth } from '@composables/useAuth';
 import { CButton } from '@coreui/vue';
+import { addDoc, collection, doc, getDoc, onSnapshot, orderBy, query, serverTimestamp, where } from 'firebase/firestore';
+import { nextTick, ref, watch } from 'vue';
 
 const props = defineProps<{ activeGroupId: string | null }>();
 const { user } = useAuth();

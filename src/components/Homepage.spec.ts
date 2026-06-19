@@ -1,11 +1,12 @@
 import { describe, it, expect, vi } from "vitest";
 import { mount } from "@vue/test-utils";
-import Homepage from "../Homepage.vue";
+import Homepage from "../HomePage.vue";
 import EntityOnboarding from "../EntityOnboarding.vue";
 
 // Mock Three.js WebGLRenderer for JSDOM
+// @ts-ignore
 vi.mock("three", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("three")>();
+  const actual = await importOriginal<any>();
   return {
     ...actual,
     WebGLRenderer: vi.fn().mockImplementation(() => ({
@@ -57,46 +58,48 @@ vi.stubGlobal("cancelAnimationFrame", vi.fn());
 describe("Homepage.vue Routing and Onboarding Flow", () => {
   it("triggers Entity Onboarding instead of routing immediately when a name is entered", async () => {
     const wrapper = mount(Homepage);
+    const vm = wrapper.vm as any;
 
     // 1. Force the UI into the name input state
-    wrapper.vm.showNameInput = true;
-    await wrapper.vm.$nextTick();
+    vm.showNameInput = true;
+    await vm.$nextTick();
 
     // Verify the onboarding overlay is hidden initially
-    expect(wrapper.vm.showOnboarding).toBe(false);
+    expect(vm.showOnboarding).toBe(false);
 
     // 2. Simulate entering a new username and triggering the route
-    wrapper.vm.username = "I.T Real";
-    wrapper.vm.tryRoute();
-    await wrapper.vm.$nextTick();
+    vm.username = "I.T Real";
+    vm.tryRoute();
+    await vm.$nextTick();
 
     // 3. Verify the direct route was interrupted and the onboarding overlay appeared
-    expect(wrapper.vm.showOnboarding).toBe(true);
+    expect(vm.showOnboarding).toBe(true);
 
     const onboardingOverlay = wrapper.findComponent(EntityOnboarding);
     expect(onboardingOverlay.exists()).toBe(true);
 
     // 4. Simulate the Onboarding component completing the 16-thread sequence
     onboardingOverlay.vm.$emit("complete");
-    await wrapper.vm.$nextTick();
+    await vm.$nextTick();
 
     // 5. Verify the overlay closes, paving the way for the cinematic Gateway zoom
-    expect(wrapper.vm.showOnboarding).toBe(false);
+    expect(vm.showOnboarding).toBe(false);
   });
 
   it('skips onboarding and proceeds directly when the admin username "ime iopic" is entered', async () => {
     const wrapper = mount(Homepage);
+    const vm = wrapper.vm as any;
 
-    wrapper.vm.showNameInput = true;
-    await wrapper.vm.$nextTick();
+    vm.showNameInput = true;
+    await vm.$nextTick();
 
     // Simulate entering the backdoor username (case insensitive)
-    wrapper.vm.username = "Ime Iopic";
-    wrapper.vm.tryRoute();
-    await wrapper.vm.$nextTick();
+    vm.username = "Ime Iopic";
+    vm.tryRoute();
+    await vm.$nextTick();
 
     // Verify the onboarding overlay was completely bypassed
-    expect(wrapper.vm.showOnboarding).toBe(false);
+    expect(vm.showOnboarding).toBe(false);
     expect(wrapper.findComponent(EntityOnboarding).exists()).toBe(false);
   });
 });

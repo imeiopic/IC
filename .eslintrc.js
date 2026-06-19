@@ -11,7 +11,7 @@ module.exports = {
     "eslint:recommended",
     "@vue/eslint-config-typescript",
     // Prettier MUST be the last extension to properly override styling rules
-    "@vue/eslint-config-prettier/skip-formatting",
+    "prettier"
   ],
   parserOptions: {
     ecmaVersion: "latest",
@@ -19,5 +19,10 @@ module.exports = {
   rules: {
     // Add any custom project rules here
     "vue/multi-word-component-names": "off", // Optional: prevents errors on single-word component names like "Homepage.vue"
+
+    // Manual overrides for rules that conflict with Prettier
+    "indent": "off",
+    "quotes": "off",
+    "semi": "off"
   },
 };

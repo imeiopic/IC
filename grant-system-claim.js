@@ -16,13 +16,19 @@ program
   .argument('<email>', 'User email address')
   .argument('<claimName>', 'Name of the claim to grant (e.g., admin, editor)')
   .argument('[claimValue]', 'Value of the claim (defaults to true)', 'true')
-  .action(grantCustomClaim);
+  .action(async (email, claimName, claimValueRaw, options) => {
+    await grantCustomClaim(email, claimName, claimValueRaw, options);
+  });
 
 async function grantCustomClaim(email, claimName, claimValueRaw, options) {
   if (options.useEmulator) {
     process.env.FIRESTORE_EMULATOR_HOST = '127.0.0.1:8080';
     process.env.FIREBASE_AUTH_EMULATOR_HOST = '127.0.0.1:9099';
     console.log('🛠️  Connecting to local Emulator substrate...');
+  } else if (!process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+    console.warn(
+      '⚠️  Warning: GOOGLE_APPLICATION_CREDENTIALS not set. Ensure you are authenticated via gcloud CLI or service account key.'
+    );
   }
 
   admin.initializeApp({
@@ -44,26 +50,37 @@ async function grantCustomClaim(email, claimName, claimValueRaw, options) {
     console.log(`🔍 Found user: ${user.uid} (${email})`);
 
     const existingClaims = user.customClaims || {};
+
+    // Enforce logic: admin claim usually implies other system access
     const newClaims = {
       ...existingClaims,
       [claimName]: claimValue
     };
 
+    console.log(`🚀 Setting claims: ${JSON.stringify(newClaims)}`);
     await auth.setCustomUserClaims(user.uid, newClaims);
-    
+
     const db = admin.firestore();
+    const batch = db.batch();
 
     // Update the identity substrate in Firestore to reflect the new claims.
     // This ensures that the identities collection remains synchronized with Auth metadata.
     console.log(`📑 Synchronizing identity substrate for ${user.uid}...`);
-    await db.collection('identities').doc(user.uid).set({
-      email: user.email,
-      fullName: user.displayName || 'Anonymous Node',
-      customClaims: newClaims,
-      lastModified: admin.firestore.FieldValue.serverTimestamp(),
-      // Maintenance of version symmetry for protocol consistency
-      version: admin.firestore.FieldValue.increment(1)
-    }, { merge: true });
+    await db
+      .collection('identities')
+      .doc(user.uid)
+      .set(
+        {
+          email: user.email,
+          fullName: user.displayName || 'Anonymous Node',
+          customClaims: newClaims,
+          isAdmin: newClaims.admin === true, // Explicit flag for easier querying
+          lastModified: admin.firestore.FieldValue.serverTimestamp(),
+          // Maintenance of version symmetry for protocol consistency
+          version: admin.firestore.FieldValue.increment(1)
+        },
+        { merge: true }
+      );
 
     if (claimValue === true) {
       const requestsRef = db.collection('access_requests');
@@ -75,14 +92,12 @@ async function grantCustomClaim(email, claimName, claimValueRaw, options) {
 
       if (!snapshot.empty) {
         console.log(`📑 Synchronizing ${snapshot.size} pending access request(s) to "Approved"...`);
-        const batch = db.batch();
-        snapshot.docs.forEach(doc => {
-          batch.update(doc.ref, { 
-            status: 'Approved', 
-            processedAt: admin.firestore.FieldValue.serverTimestamp() 
+        snapshot.docs.forEach((doc) => {
+          batch.update(doc.ref, {
+            status: 'Approved',
+            processedAt: admin.firestore.FieldValue.serverTimestamp()
           });
         });
-        await batch.commit();
       }
     } else if (claimValue === false) {
       const requestsRef = db.collection('access_requests');
@@ -94,24 +109,26 @@ async function grantCustomClaim(email, claimName, claimValueRaw, options) {
 
       if (!snapshot.empty) {
         console.log(`📑 Synchronizing ${snapshot.size} pending access request(s) to "Denied"...`);
-        const batch = db.batch();
         const reason = options.reason || 'Insufficient protocol symmetry.';
-        snapshot.docs.forEach(doc => {
-          batch.update(doc.ref, { 
+        snapshot.docs.forEach((doc) => {
+          batch.update(doc.ref, {
             status: 'Denied',
             denialReason: reason,
-            processedAt: admin.firestore.FieldValue.serverTimestamp() 
+            processedAt: admin.firestore.FieldValue.serverTimestamp()
           });
         });
-        await batch.commit();
       }
     }
 
-    console.log(`✅ Success: Claim { "${claimName}": ${JSON.stringify(claimValue)} } updated for ${email}`);
-    
+    await batch.commit();
+
+    console.log(
+      `✅ Success: Claim { "${claimName}": ${JSON.stringify(claimValue)} } updated for ${email}`
+    );
+
     const updatedUser = await auth.getUser(user.uid);
     console.log('Current Custom Claims:', JSON.stringify(updatedUser.customClaims, null, 2));
-    
+
     process.exit(0);
   } catch (error) {
     console.error('❌ Failed to grant claim:', error.message);

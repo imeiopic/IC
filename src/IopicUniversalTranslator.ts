@@ -62,7 +62,7 @@ export const IopicTranslator = {
    * Records the extracted intent for system-wide learning and pattern recognition.
    * Contributes to the collective "shared reality" substrate.
    */
-  private async recordIntent(logicBits: string, signal?: AbortSignal) {
+  async recordIntent(logicBits: string, signal?: AbortSignal) {
     const intent = logicBits.split(':')[1];
     if (!intent) return;
 
@@ -114,7 +114,7 @@ export const IopicTranslator = {
    * Calculates "asymmetrical noise" level in the input.
    * Higher fragmentation or brevity = higher noise.
    */
-  private calculateNoiseFloor(data: string): number {
+  calculateNoiseFloor(data: string): number {
     if (!data || data.length === 0) return 1.0;
     // Shorter or highly repetitive input = more noise
     return Math.min(1, 8 / (data.length + 10));
@@ -124,7 +124,7 @@ export const IopicTranslator = {
    * Extracts the core logical intent, stripping linguistic surface noise.
    * In a real implementation this would use advanced semantic understanding.
    */
-  private extractLogic(data: string): string {
+  extractLogic(data: string): string {
     // Placeholder — future versions will use true semantic parsing
     const coreIntents = [
       'EQUITY', 'SYMMETRY', 'SHARED_REALITY', 'CONNECTION',
@@ -139,7 +139,7 @@ export const IopicTranslator = {
   /**
    * Re-synthesizes the universal logic into clear, target-language output.
    */
-  private synthesize(logicBits: string, targetLang: string): string {
+  synthesize(logicBits: string, targetLang: string): string {
     const [, intent] = logicBits.split(':');
 
     return `[${targetLang.toUpperCase()}] ${intent.replace('_', ' ')} — Grounded in Shared Reality.`;

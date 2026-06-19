@@ -1,0 +1,101 @@
+name: Iopic Protocol CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test-and-verify:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 🛰️ Checkout Substrate
+        uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: ☕ Setup Java (Required for Emulators)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: 📦 Install Dependencies
+        run: npm install
+
+      - name: 🔥 Install Firebase CLI
+        run: npm install -g firebase-tools
+
+      - name: 🧪 Run Unit Tests (Vitest)
+        # Runs index.spec.js and multer-config.spec.js
+        run: npx vitest run
+
+      - name: 🔐 Verify Firestore Security Rules
+        # Executing via the emulator to satisfy firestore.rules.spec.js
+        run: |
+          firebase emulators:exec --project calcium-channel-489906-m2 "npm run test:rules"
+        env:
+          GCLOUD_PROJECT: calcium-channel-489906-m2
+
+  deploy-to-staging:
+    name: 🧪 Auto-Deploy to Staging
+    needs: test-and-verify
+    # Trigger on pushes to the develop branch
+    if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - name: 🛰️ Checkout Substrate
+        uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: 📦 Install Dependencies
+        run: npm install
+
+      - name: 🔥 Install Firebase CLI
+        run: npm install -g firebase-tools
+
+      - name: 🔥 Deploy to Staging Project
+        run: firebase deploy --project staging-project-id
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN_STAGING }}
+
+  deploy-to-production:
+    name: 🚀 Deploy to Production Substrate
+    needs: test-and-verify
+    environment: production
+    # Ensure this only runs on the main branch for push events (merges/direct pushes)
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🛰️ Checkout Substrate
+        uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: 📦 Install Dependencies
+        run: npm install
+
+      - name: 🔥 Install Firebase CLI
+        run: npm install -g firebase-tools
+
+      - name: 🔥 Deploy Protocol
+        # This invokes 'npm run build' and then 'firebase deploy' as defined in package.json
+        run: npm run deploy
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}

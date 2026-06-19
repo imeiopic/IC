@@ -2,205 +2,78 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper functions for readability and security
-    function isSignedIn() {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: {userId}
+    // Fields:
+    //   - iowb: map { balance: number, isGrounded: bool }
+    //   - role: string (optional: 'AUDITOR', 'NODE')
+    //   - ledger: map { last_reallocation_sync: timestamp, ... }
+    //
+    // Collection: registry
+    // Document ID: global_mesh_wallet
+    // Fields:
+    //   - caretaker_mutuality_pool: number
+    //   - last_updated: timestamp
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+
+    function isAuthenticated() {
       return request.auth != null;
     }
-    
-    function isSelf(userId) {
-      return isSignedIn() && request.auth.uid == userId;
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
     }
 
-    // Helper to identify the system/seed account
-    function isSystem() {
-      return isSignedIn() && request.auth.token.system == true;
+    // Check if the node has been granted Auditor privileges
+    function isAuditor() {
+      return isAuthenticated() && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'AUDITOR';
     }
 
-    // Helper to identify administrative accounts via custom claims
-    function isAdmin() {
-      return isSignedIn() && request.auth.token.admin == true;
+    // ===============================================================
+    // Registry: Caretaker Mutuality Pool
+    // ===============================================================
+
+    match /registry/global_mesh_wallet {
+      // Only specific Auditor nodes or the system itself can sight the global equity pool.
+      // This ensures the Caretaker Mutuality model remains transparent but secure.
+      allow read: if isAuditor();
+
+      // CRITICAL: Prevent manual tampering with the Caretaker Pool.
+      // Client-side writes are forbidden. Modifications are strictly reserved 
+      // for the Settlement Layer via Admin SDK (handleStripeWebhook).
+      allow write: if false;
     }
 
-    // Helper to identify editor accounts via custom claims
-    function isEditor() {
-      return isSignedIn() && request.auth.token.editor == true;
-    }
-
-    function isValidStatus() {
-      return 'status' in request.resource.data && 
-             request.resource.data.status in ['Pending', 'Active'];
-    }
-
-    function isTypeBool(fieldName) {
-      let data = request.resource.data;
-      return !(fieldName in data) || data[fieldName] is bool;
-    }
-
-    function isValidPaymentSplit() {
-      let data = request.resource.data;
-      return !(data.get('inviteePays', false) && data.get('inviteePaysHalf', false));
-    }
-
-    function isTimestampNow() {
-      return request.resource.data.lastModified == request.time;
-    }
-
-    function isVersionIncremented() {
-      return request.resource.data.version == resource.data.version + 1;
-    }
-
-    function isInitialVersion() {
-      return request.resource.data.version == 1;
-    }
-
-    // 1. Identities: Users manage their own profile info.
-    match /identities/{userId} {
-      // Authenticated users can read other identities for protocol verification.
-      allow read: if isSignedIn();
-      
-      allow create: if (isSystem() || isAdmin() || isEditor() || isSelf(userId)) && isValidStatus() && isTypeBool('isPremium') && 
-                      isTimestampNow() && (isSystem() || isAdmin() || isEditor() || isInitialVersion());
-      
-      allow update: if (isSystem() || isAdmin() || isEditor() || isSelf(userId)) && isValidStatus() && isTypeBool('isPremium') && 
-                      isTimestampNow() && (isSystem() || isAdmin() || isEditor() || isVersionIncremented());
-
-      allow delete: if isSystem() || isAdmin() || isEditor() || isSelf(userId);
-    }
+    // ===============================================================
+    // Users: Sovereign Nodes
+    // ===============================================================
 
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-    }
+      allow read: if isOwner(userId);
 
-    match /invitees/{docId} {
-
-      // 1. Read: Users can see their own profile or invites they are involved in.
-      allow read: if isSignedIn() && (
-        request.auth.uid == docId || 
-        request.auth.uid == resource.data.inviterUid || 
-        request.auth.uid == resource.data.targetUid
-      );
-
-      // 2. Create: Authenticated users can create new invite entries.
-      allow create: if (isSystem() || isAdmin() || isEditor() || (isSignedIn() && request.resource.data.inviterUid == request.auth.uid)) && 
-                      isValidStatus() && 
-                      isTypeBool('inviteePays') && 
-                      isTypeBool('inviteePaysHalf') &&
-                      isValidPaymentSplit() &&
-                      isTimestampNow() &&
-                      (isSystem() || isAdmin() || isEditor() || isInitialVersion());
-
-      // 3. Update: Highly restricted to prevent protocol tampering.
-      allow update: if isSystem() || isAdmin() || isEditor() || (isSignedIn() && (
-        // Profile Update: Ensure users can ONLY change the 'name' field on their own document.
-        (isSelf(docId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'lastModified', 'version']) && 
-         isValidStatus() && isTimestampNow() && isVersionIncremented()) ||
-        
-        // Handshake: Allow targets to accept invites (updates status or payment flags).
-        (request.auth.uid == resource.data.targetUid && 
-         request.resource.data.diff(resource.data).affectedKeys().hasAny(['status', 'inviteePays', 'inviteePaysHalf', 'version']) &&
-         isValidStatus() && 
-         isTypeBool('inviteePays') && 
-         isTypeBool('inviteePaysHalf') &&
-         isValidPaymentSplit() &&
-         isTimestampNow() &&
-         isVersionIncremented()))
-      );
-
-      // 4. Delete: Allow if the user is the inviter or the target (to deny an invite).
-      allow delete: if isSystem() || isAdmin() || isEditor() || (isSignedIn() && (
-        request.auth.uid == resource.data.inviterUid || 
-        request.auth.uid == resource.data.targetUid
-      ));
-    }
-
-    // Access Requests: Users can request upgrades, Admins manage them.
-    match /access_requests/{requestId} {
-      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid;
-      allow read: if isSignedIn() && (resource.data.uid == request.auth.uid || isAdmin() || isSystem());
-      allow update: if isAdmin() || isSystem();
-      allow delete: if isAdmin() || isSystem() || (
-        isSignedIn() && resource.data.uid == request.auth.uid && resource.data.status == 'Denied'
-      );
-    }
-
-    // Email Logs: System-only writes via Admin SDK, Admins can audit.
-    match /email_logs/{logId} {
-      allow read: if isAdmin() || isSystem();
-      allow write: if isSystem();
-      allow delete: if isAdmin();
-    }
-
-    // Daily Stats: Aggregated metrics for dashboard performance.
-    match /daily_stats/{dateId} {
-      // Allow any authenticated node to read stats to support dashboard monitoring without admin claims.
-      allow read: if isSignedIn();
-      // Only the system logic should be able to perform writes/updates.
-      // Admins are restricted to read-only to prevent manual tampering with aggregates.
-      allow write: if isSystem();
-    }
-
-    // USL Intent Substrate: Collaborative Learning vs. Admin Purge
-    match /system_stats/intent_learning {
-      // Any authenticated node can read and contribute (update) to the learning mesh
-      allow read, update: if isSignedIn();
+      // Prevent users from manually inflating balance, grounding status, or granting themselves roles.
+      allow create: if isOwner(userId) 
+        && request.resource.data.iowb.balance == 0
+        && (!('role' in request.resource.data) || request.resource.data.role == 'NODE');
       
-      // Only Root Stewards (admins) can initialize or purge the substrate
-      allow create, delete: if isAdmin();
-      
-      // Explicitly protect overwrites
-      allow write: if isAdmin();
+      allow update: if isOwner(userId)
+        && !request.resource.data.iowb.diff(resource.data.iowb).affectedKeys().hasAny(['balance', 'isGrounded'])
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']));
     }
 
-    match /system/{docId} {
-      allow read: if isSignedIn();
-      allow write: if isSystem() || isAdmin();
-    }
-
-    // Instances: Manage access to collaborative instances
-    match /instances/{instanceId} {
-      // Only participants are allowed to read the instance
-      allow read: if isSignedIn() && request.auth.uid in resource.data.participants;
-      
-      // Creator must assign themselves ownership and place themselves in the participants list
-      allow create: if isSignedIn() && 
-                    request.resource.data.creatorId == request.auth.uid &&
-                    request.auth.uid in request.resource.data.participants;
-
-      allow update: if isSignedIn() && 
-                    // 1. Prevent changing the creatorId entirely
-                    request.resource.data.creatorId == resource.data.creatorId &&
-                    // 2. Ensure the creatorId remains in the participants array
-                    resource.data.creatorId in request.resource.data.participants &&
-                    // 3. Differentiate between Creator and Guest capabilities
-                    (
-                      // The Creator can update the instance details freely
-                      request.auth.uid == resource.data.creatorId 
-                      || 
-                      // Guests can ONLY update the document to remove themselves
-                      (
-                        request.auth.uid in resource.data.participants &&
-                        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['participants']) &&
-                        !(request.auth.uid in request.resource.data.participants) &&
-                        request.resource.data.participants.hasOnly(resource.data.participants)
-                      )
-                      ||
-                      // Strangers can JOIN if they provide the correct access code
-                      (
-                        !(request.auth.uid in resource.data.participants) &&
-                        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['participants', 'providedAccessCode']) &&
-                        request.resource.data.providedAccessCode == get(/databases/$(database)/documents/instances/$(instanceId)/secrets/private).data.accessCode &&
-                        request.auth.uid in request.resource.data.participants &&
-                        request.resource.data.participants.hasAll(resource.data.participants) &&
-                        request.resource.data.participants.size() == resource.data.participants.size() + 1
-                      )
-                    );
-    }
-
-    // Secure the secrets subcollection
-    match /instances/{instanceId}/secrets/{secretDoc} {
-      // Only the creator of the instance can read or write the secrets
-      allow read, write: if isSignedIn() && 
-                         get(/databases/$(database)/documents/instances/$(instanceId)).data.creatorId == request.auth.uid;
+    // General fallback: Deny anything not explicitly allowed
+    match /{allPaths=**} {
+      allow read, write: if false;
     }
   }
 }

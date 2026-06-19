@@ -1,0 +1,15 @@
+# Ignore git metadata
+.git
+.gitignore
+
+# Ignore frontend source code and local assets
+src/
+public/
+index.html
+vite.config.ts
+tsconfig*.json
+
+# Ignore local environment files and logs
+.env*
+*.log
+node_modules/

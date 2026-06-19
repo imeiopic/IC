@@ -1,8 +1,18 @@
 import { ref, onUnmounted, nextTick, computed } from 'vue';
-import { collection, addDoc, query, where, getDocs, limit, doc, deleteDoc, updateDoc } from 'firebase/firestore';
+import {
+  collection,
+  addDoc,
+  query,
+  where,
+  getDocs,
+  limit,
+  doc,
+  deleteDoc,
+  updateDoc,
+} from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
-import { db } from './firebase-config';
-import { safeOnSnapshot } from './firestoreUtils';
+import { db } from '@/firebase';
+import { safeOnSnapshot } from './firestoreUtils'; // Standardized to firebase.ts
 import { useDebounce } from './useDebounce';
 
 export interface Invitee {
@@ -16,12 +26,12 @@ export interface Invitee {
 }
 
 /**
- * useInviteManagement: Composable for handling the creation and 
+ * useInviteManagement: Composable for handling the creation and
  * validation of new protocol invites, and managing the active list.
  */
 export function useInviteManagement() {
   const auth = getAuth();
-  
+
   // State for the invite list
   const invitees = ref<Invitee[]>([]);
   const searchQuery = ref('');
@@ -52,9 +62,11 @@ export function useInviteManagement() {
     if (!queryStr) return invitees.value;
 
     return invitees.value.filter((invitee) => {
-      return invitee.name.toLowerCase().includes(queryStr) ||
-             invitee.level.toLowerCase().includes(queryStr) ||
-             invitee.status.toLowerCase().includes(queryStr);
+      return (
+        invitee.name.toLowerCase().includes(queryStr) ||
+        invitee.level.toLowerCase().includes(queryStr) ||
+        invitee.status.toLowerCase().includes(queryStr)
+      );
     });
   });
 
@@ -74,7 +86,7 @@ export function useInviteManagement() {
       const querySnapshot = await getDocs(q);
 
       if (querySnapshot.empty) {
-        throw new Error("Identity Lookup Failed: Target email not found in protocol registry.");
+        throw new Error('Identity Lookup Failed: Target email not found in protocol registry.');
       }
 
       const targetUid = querySnapshot.docs[0].id;
@@ -85,7 +97,7 @@ export function useInviteManagement() {
         status: 'Pending',
         inviteePays: inviteePays.value,
         targetUid: targetUid,
-        inviterUid: auth.currentUser.uid
+        inviterUid: auth.currentUser.uid,
       });
       // Reset form state
       newName.value = '';
@@ -93,7 +105,7 @@ export function useInviteManagement() {
       newLevel.value = 'Member';
       inviteePays.value = false;
     } catch (error) {
-      console.error("Iopic Protocol Error: Failed to register invitee.", error);
+      console.error('Iopic Protocol Error: Failed to register invitee.', error);
     } finally {
       isSubmitting.value = false;
     }
@@ -110,7 +122,7 @@ export function useInviteManagement() {
         await updateDoc(inviteeRef, { status: 'Active', inviteePays: false });
       }
     } catch (error) {
-      console.error("Iopic Protocol Error: Handshake failed.", error);
+      console.error('Iopic Protocol Error: Handshake failed.', error);
       throw error;
     }
   };
@@ -119,7 +131,7 @@ export function useInviteManagement() {
     try {
       await deleteDoc(doc(db, 'invitees', id));
     } catch (error) {
-      console.error("Iopic Protocol Error: Failed to remove invitee.", error);
+      console.error('Iopic Protocol Error: Failed to remove invitee.', error);
       throw error;
     }
   };
@@ -130,34 +142,41 @@ export function useInviteManagement() {
     cancelRetry();
 
     const q = query(collection(db, 'invitees'));
-    
-    unsubscribe = safeOnSnapshot(q, (snapshot) => {
-      connectionError.value = false;
-      retryCount.value = 0; // Reset on successful sync
-      lastSyncTimestamp.value = Date.now();
 
-      invitees.value = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      } as Invitee));
-      
-      loading.value = false;
-      nextTick(() => {
-        isInitialLoad.value = false;
-      });
-    }, {
-      onError: (error) => {
-        console.error("Iopic Protocol Sync Error:", error);
-        connectionError.value = true;
+    unsubscribe = safeOnSnapshot(
+      q,
+      (snapshot) => {
+        connectionError.value = false;
+        retryCount.value = 0; // Reset on successful sync
+        lastSyncTimestamp.value = Date.now();
+
+        invitees.value = snapshot.docs.map(
+          (doc) =>
+            ({
+              id: doc.id,
+              ...doc.data(),
+            } as Invitee)
+        );
+
         loading.value = false;
-
-        if (retryCount.value < MAX_RETRIES) {
-          retryCount.value++;
-          debounceRetry();
-        }
+        nextTick(() => {
+          isInitialLoad.value = false;
+        });
       },
-      shouldReport: () => retryCount.value >= MAX_RETRIES
-    });
+      {
+        onError: (error) => {
+          console.error('Iopic Protocol Sync Error:', error);
+          connectionError.value = true;
+          loading.value = false;
+
+          if (retryCount.value < MAX_RETRIES) {
+            retryCount.value++;
+            debounceRetry();
+          }
+        },
+        shouldReport: () => retryCount.value >= MAX_RETRIES,
+      }
+    );
   };
 
   onUnmounted(() => {
@@ -165,24 +184,24 @@ export function useInviteManagement() {
     cancelRetry();
   });
 
-  return { 
-    invitees, 
+  return {
+    invitees,
     filteredInvitees,
     searchQuery,
     lastSyncTimestamp,
-    loading, 
-    connectionError, 
+    loading,
+    connectionError,
     retryCount,
     MAX_RETRIES,
     isInitialLoad,
-    newName, 
-    inviteeEmail, 
-    newLevel, 
-    inviteePays, 
-    isSubmitting, 
-    addInvitee, 
-    handleProposal, 
-    removeInvitee, 
-    connectToProtocol 
+    newName,
+    inviteeEmail,
+    newLevel,
+    inviteePays,
+    isSubmitting,
+    addInvitee,
+    handleProposal,
+    removeInvitee,
+    connectToProtocol,
   };
 }

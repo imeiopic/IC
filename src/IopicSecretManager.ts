@@ -26,7 +26,7 @@ export class IopicSecretManager {
 
         // Encrypt using AES-GCM (Authenticated Encryption)
         const ciphertext = await globalThis.crypto.subtle.encrypt(
-            { name: this.ALGO, iv },
+            { name: this.ALGO, iv: iv as Uint8Array },
             aesKey,
             data
         );
@@ -68,7 +68,7 @@ export class IopicSecretManager {
 
         // Decrypt and verify GCM authentication tag
         const decrypted = await globalThis.crypto.subtle.decrypt(
-            { name: this.ALGO, iv },
+            { name: this.ALGO, iv: iv as Uint8Array },
             aesKey,
             ciphertext
         );

@@ -11,7 +11,7 @@
 <script lang="ts">
 import { defineComponent, ref } from 'vue';
 import SynapseHUD from './SynapseHUD.vue';
-import { System, Bond } from './SynapseGate';
+import { System, type Bond } from './SynapseGate';
 
 export default defineComponent({
   name: 'SynapseGateDemo',

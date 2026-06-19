@@ -20,10 +20,10 @@
 </template>
 
 <script setup lang="ts">
-import Health from '@/components/Health.vue';
-import Energy from '@/components/Energy.vue';
-import Pharmacy from '@/components/Pharmacy.vue';
-import Education from '@/components/Education.vue';
+import Health from '@components/Health.vue';
+import Energy from '@components/Energy.vue';
+import Pharmacy from '@components/Pharmacy.vue';
+import Education from '@components/Education.vue';
 </script>
 
 <style scoped>

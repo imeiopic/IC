@@ -76,21 +76,21 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed, watch } from 'vue';
-import { db } from '../firebase';
-import { collection, query, orderBy, onSnapshot, where, documentId } from 'firebase/firestore';
-import { Line } from 'vue-chartjs';
+import type { ChartOptions } from 'chart.js';
 import {
+    CategoryScale,
     Chart as ChartJS,
-    Title,
-    Tooltip,
     Legend,
+    LinearScale,
     LineElement,
     PointElement,
-    CategoryScale,
-    LinearScale,
-    ChartOptions
+    Title,
+    Tooltip
 } from 'chart.js';
+import { collection, documentId, onSnapshot, orderBy, query, where } from 'firebase/firestore';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
+import { Line } from 'vue-chartjs';
+import { db } from '../firebase';
 
 ChartJS.register(Title, Tooltip, Legend, LineElement, PointElement, CategoryScale, LinearScale);
 

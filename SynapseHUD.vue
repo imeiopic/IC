@@ -22,7 +22,7 @@
 
 <script lang="ts">
 import { defineComponent, ref } from 'vue';
-import { System, Bond } from './SynapseGate';
+import type { Bond } from './SynapseGate';
 
 export default defineComponent({
   name: 'SynapseHUD',

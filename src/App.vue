@@ -1,449 +1,276 @@
 <template>
-  <div id="app" class="home-page" :class="{ 'splash-active': showSplash }">
-    <div v-if="showSplash" class="splash-screen"></div>
+  <div id="app" class="iopic-substrate" :class="{ 'splash-active': showSplash }">
+    <transition name="fade">
+      <div v-if="showSplash" class="splash-screen bg-black position-fixed inset-0 z-3">
+        </div>
+    </transition>
 
     <div
       v-if="globalError"
-      class="global-error-overlay alert alert-danger shadow-lg border-0 m-3"
+      class="global-error-overlay alert alert-danger shadow-lg border-0 m-3 position-fixed top-0 start-50 translate-middle-x z-3 w-100"
+      style="max-width: 600px"
       role="alert"
     >
       <div class="d-flex justify-content-between align-items-center">
-        <span class="d-flex align-items-center gap-2">
+        <span class="d-flex align-items-center gap-2 tw-font-terminal">
           <i class="bi bi-shield-lock-fill"></i>
-          <strong class="text-uppercase">System Alert:</strong> {{ globalError }}
+          <strong class="text-uppercase tracking-widest">CRITICAL_FRACTURE:</strong> {{ globalError }}
         </span>
-        <button type="button" class="btn-close" @click="clearError"></button>
+        <button type="button" class="btn-close btn-close-white" @click="clearError"></button>
       </div>
     </div>
 
     <div v-if="isInitialized" class="initialized-content">
-      <div class="vignette-overlay"></div>
+      <div class="vignette-overlay pointer-events-none position-fixed inset-0 z-0"></div>
 
-      <nav class="navbar navbar-expand-lg navbar-dark shadow-sm glass-navbar">
+      <nav class="navbar navbar-expand-lg navbar-dark shadow-sm glass-navbar position-relative z-2">
         <div class="container-fluid">
           <router-link class="navbar-brand fw-bold d-flex align-items-center" to="/">
-            <img src="/images/logo" alt="IO Logo" width="32" height="32" class="me-2 logo-img" />
-            IOPIC
+            <img src="/images/iologo.png" alt="IO" width="32" height="32" class="me-2 logo-img" />
+            <span class="tracking-widest">IOPIC</span>
           </router-link>
+
+          <button
+            class="navbar-toggler border-0"
+            type="button"
+            data-bs-toggle="collapse"
+            data-bs-target="#navbarNav"
+          >
+            <span class="navbar-toggler-icon"></span>
+          </button>
 
           <div class="collapse navbar-collapse" id="navbarNav">
             <ul class="navbar-nav ms-auto mb-2 mb-lg-0 align-items-center">
-              <li class="nav-item d-none d-md-block px-3">
-                <div
-                  class="system-status font-monospace tiny text-uppercase d-flex flex-column align-items-end"
-                >
-                  <div class="status-top">
-                    <span
-                      :class="[
-                        'status-dot',
-                        isSynced ? 'text-success' : 'text-warning status-pulse'
-                      ]"
-                      >●</span
-                    >
-                    <span class="ms-1 text-white">{{
-                      isSynced ? 'Bus: Synced' : 'Bus: Syncing'
-                    }}</span>
+              
+              <li class="nav-item px-3 d-none d-lg-block border-end border-zinc-800 me-3">
+                <div class="system-status tw-font-terminal tiny text-uppercase text-end">
+                  <div class="d-flex align-items-center justify-content-end gap-2">
+                    <span :class="['status-dot', isSynced ? 'text-success' : 'text-warning status-pulse']">●</span>
+                    <span class="text-white">{{ isSynced ? 'BUS_LOCKED' : 'BUS_SYNCING' }}</span>
                   </div>
-                  <div
-                    v-if="userLocation"
-                    class="location-tag text-info italic"
-                    style="font-size: 0.55rem; letter-spacing: 1px"
-                  >
-                    {{ userLocation.city }}, {{ userLocation.county }}
+                  <div v-if="userLocationString" class="location-tag text-info tw-italic extra-tiny">
+                    {{ userLocationString }}
                   </div>
                 </div>
-              </li>
-              <li class="nav-item">
-                <router-link class="nav-link" to="/manifesto">Manifesto</router-link>
-              </li>
-              <li class="nav-item">
-                <router-link class="nav-link" to="/gov">Government</router-link>
-              </li>
-              <li class="nav-item">
-                <router-link class="nav-link" to="/reset">Reset</router-link>
-              </li>
-              <li class="nav-item"><router-link class="nav-link" to="/doc">Doc</router-link></li>
-              <li class="nav-item">
-                <router-link class="nav-link" to="/playlist">Playlist</router-link>
-              </li>
-              <li class="nav-item">
-                <router-link class="nav-link" to="/video-gallery">VideoGallery</router-link>
-              </li>
-              <li class="nav-item">
-                <router-link class="nav-link" to="/Slides">Slides</router-link>
-              </li>
-              <li class="nav-item"><router-link class="nav-link" to="/iod">Donate</router-link></li>
-              <li class="nav-item" v-if="user">
-                <router-link class="nav-link" to="/peers">My Peers</router-link>
               </li>
 
-              <li class="nav-item d-none d-md-block px-3">
-                <div class="system-status font-monospace tiny text-uppercase">
-                  <span
-                    :class="['status-dot', isSynced ? 'text-success' : 'text-warning status-pulse']"
-                    >●</span
-                  >
-                  <span class="ms-1 text-white">{{
-                    isSynced ? 'Bus: Synced' : 'Bus: Syncing'
-                  }}</span>
-                </div>
+              <li class="nav-item"><router-link class="nav-link" to="/manifesto">Manifesto</router-link></li>
+              <li class="nav-item"><router-link class="nav-link" to="/virtual">Virtual_OS</router-link></li>
+              <li class="nav-item"><router-link class="nav-link" to="/earth">VR_Earth</router-link></li>
+              <li class="nav-item"><router-link class="nav-link" to="/people">Peers</router-link></li>
+              
+              <li class="nav-item">
+                <a class="nav-link cursor-pointer text-zinc-400 hover:text-white" @click.prevent="showBiosModal = true">BIOS</a>
+              </li>
+              
+              <li class="nav-item">
+                <router-link class="nav-link text-warning fw-bold" to="/iod">PAY_IO$</router-link>
+              </li>
+              <li class="nav-item" v-if="user">
+                <router-link class="nav-link text-info fw-bold" to="/ime">I_AM</router-link>
               </li>
             </ul>
           </div>
         </div>
       </nav>
 
-      <main class="container text-center py-5 position-relative z-1">
-        <router-view />
+      <main class="container-fluid p-0 position-relative z-1 min-vh-100">
+        <div v-if="successMsg" class="alert alert-success text-center tw-font-terminal tiny rounded-0 border-0 tw-animate-pulse m-0 position-absolute w-100 z-2">
+          {{ successMsg }}
+        </div>
+        <router-view v-slot="{ Component }">
+          <transition name="fade" mode="out-in">
+            <component :is="Component" />
+          </transition>
+        </router-view>
       </main>
 
-      <div
-        v-if="onboardingStep > 0"
-        class="modal fade show d-block"
-        style="background: rgba(0, 0, 0, 0.95)"
-      >
-        <div class="modal-dialog modal-dialog-centered">
-          <div
-            class="modal-content bg-dark border border-emerald-500 text-white p-4 shadow-emerald"
-          >
-            <div v-if="onboardingStep === 1" class="text-center py-4">
-              <i class="bi bi-person-bounding-box text-emerald-500 display-1"></i>
-              <p class="mt-3 font-mono">
-                Position your face in the frame to ground your identity node.
-              </p>
-              <button class="btn btn-primary w-100 py-3" @click="initCamera">
-                Initialize Camera
-              </button>
-            </div>
-
-            <div v-if="onboardingStep === 2" class="text-center">
-              <div
-                class="camera-wrap mx-auto mb-3 position-relative rounded-circle border border-emerald-500 overflow-hidden"
-                style="width: 280px; height: 280px"
-              >
-                <video
-                  ref="videoFeed"
-                  autoplay
-                  playsinline
-                  class="w-100 h-100 object-cover grayscale"
-                  style="transform: scaleX(-1)"
-                ></video>
-                <div class="scan-line"></div>
-              </div>
-              <canvas ref="captureCanvas" width="600" height="600" class="d-none"></canvas>
-              <button class="btn btn-success w-100 py-3 font-black" @click="captureAndSighting">
-                CAPTURE_SIGHTING
-              </button>
-            </div>
-
-            <div v-if="onboardingStep === 3" class="py-5 text-center">
-              <div class="spinner-border text-emerald-500 mb-3"></div>
-              <p class="font-mono italic">SYNCING_WITH_CLEVELAND_CLUSTER...</p>
-            </div>
-
-            <div v-if="onboardingStep === 4" class="py-4">
-              <h4 class="text-center italic font-black uppercase">Identity Grounding</h4>
-              <div class="mb-3 mt-4 text-start">
-                <label class="font-mono tiny text-zinc-500">INPUT FULL NAME</label>
-                <input
-                  v-model="fullName"
-                  type="text"
-                  class="form-control bg-transparent border-emerald-500 text-white font-mono"
-                  placeholder="Real-World Identity"
-                />
-              </div>
-              <button
-                class="btn btn-primary w-100 py-3 font-black"
-                @click="groundIdentity"
-                :disabled="!fullName"
-              >
-                GROUND_IDENTITY
-              </button>
-            </div>
-
-            <div v-if="onboardingStep === 5" class="py-4">
-              <h4 class="text-center italic font-black uppercase">Mesh Connection</h4>
-              <ul class="nav nav-pills nav-fill mb-3 bg-black rounded p-1">
-                <li class="nav-item">
-                  <button
-                    class="nav-link btn-sm py-1"
-                    :class="{ active: connectionMode === 'find' }"
-                    @click="connectionMode = 'find'"
-                  >
-                    Connect
-                  </button>
-                </li>
-                <li class="nav-item">
-                  <button
-                    class="nav-link btn-sm py-1"
-                    :class="{ active: connectionMode === 'invites' }"
-                    @click="checkInvites"
-                  >
-                    Invites ({{ invites.length }})
-                  </button>
-                </li>
-              </ul>
-
-              <div v-if="connectionMode === 'find'" class="text-start">
-                <input
-                  v-model="peerId"
-                  type="text"
-                  class="form-control bg-black border-zinc-700 text-white mb-2"
-                  placeholder="Peer/Group ID"
-                />
-                <input
-                  v-model="newGroupName"
-                  type="text"
-                  class="form-control bg-black border-zinc-700 text-white mb-3"
-                  placeholder="OR Create New Group Name"
-                />
-                <button class="btn btn-success w-100 font-black" @click="initiateHandshake">
-                  INITIATE_HANDSHAKE
-                </button>
-              </div>
-
-              <div
-                v-if="connectionMode === 'invites'"
-                class="invite-list overflow-auto"
-                style="max-height: 200px"
-              >
-                <div
-                  v-for="inv in invites"
-                  :key="inv.id"
-                  class="d-flex justify-content-between align-items-center bg-zinc-900 p-2 mb-2 rounded border border-zinc-800"
-                >
-                  <span class="tiny font-mono">{{ inv.fromName }}</span>
-                  <button class="btn btn-success btn-xs" @click="acceptInvite(inv)">ACCEPT</button>
-                </div>
-                <p v-if="invites.length === 0" class="text-center tiny opacity-50 py-3">
-                  No pending invites sighted.
-                </p>
-              </div>
-              <button
-                class="btn btn-link text-emerald-500 w-100 mt-3 tiny font-mono"
-                @click="completeOnboarding"
-              >
-                FINALIZE_MESH_ENTRY
-              </button>
-            </div>
-
-            <button type="button" class="btn btn-link text-zinc-500 mt-2" @click="abortOnboarding">
-              Abort
+      <transition name="fade">
+        <div v-if="showBiosModal" class="bios-modal-overlay" @click.self="showBiosModal = false">
+          <div class="bios-modal-content">
+            <button class="bios-modal-close-button" @click="showBiosModal = false">
+              <i class="bi bi-x-lg"></i>
             </button>
+            <BIOS :node-name="user?.uid || 'GUEST_NODE'" :last-boot="bootTimestamp" />
           </div>
         </div>
-      </div>
+      </transition>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed, onUnmounted } from 'vue';
+import { onMounted, ref, watch, computed } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import { doc, serverTimestamp, updateDoc } from 'firebase/firestore';
+
+import BIOS from '@/components/BIOS.vue'; // Adjusted path to fit new structure
 import { db } from './firebase';
-import {
-  doc,
-  onSnapshot,
-  updateDoc,
-  arrayUnion,
-  setDoc,
-  collection,
-  query,
-  where,
-  getDocs
-} from 'firebase/firestore';
-import { getStorage, ref as storageRef, uploadString } from 'firebase/storage';
-import { useAuth } from './useAuth';
-import { useRouter } from 'vue-router';
-import { useError } from './useError';
-// @ts-ignore
-// Inside App.vue <script setup>
-import { getMyLocation } from './utils/getMyLocation';
+import { useAuth } from '@/composables/useAuth';
+import { useError } from '@/composables/useError';
 
-const userLocation = ref<{ city: string; county: string } | null>(null);
-
-// Update this in your onMounted or Auth watcher
-watch(
-  user,
-  (newUser) => {
-    if (newUser && newUser.ideals) {
-      userLocation.value = {
-        city: newUser.ideals.city,
-        county: newUser.ideals.county
-      };
-    }
-  },
-  { immediate: true }
-);
-const groundIdentity = async () => {
-  try {
-    const location = await getMyLocation();
-
-    await updateDoc(doc(db, 'users', user.value.uid), {
-      fullName: fullName.value,
-      'ideals.city': location.city,
-      'ideals.county': location.county,
-      'ideals.coords': { lat: location.lat, lng: location.lng },
-      lastSighting: serverTimestamp()
-    });
-
-    alert(`IDENTITY_GROUNDED: Welcome, node of ${location.city}, ${location.county}.`);
-    onboardingStep.value = 5;
-  } catch (err) {
-    globalError.value = 'LOCATION_REQUIRED: Cannot ground node without city sighting.';
-  }
-};
-const { user, isInitialized, logout: authLogout } = useAuth();
-const { globalError, clearError } = useError();
+const { user, isInitialized } = useAuth();
+const { globalError, clearError, setGlobalError: setError } = useError();
+const route = useRoute();
 const router = useRouter();
 
+// SYSTEM_STATE
 const isSynced = ref(false);
 const showSplash = ref(true);
-const onboardingStep = ref(0);
-const videoFeed = ref<HTMLVideoElement | null>(null);
-const captureCanvas = ref<HTMLCanvasElement | null>(null);
-const stream = ref<MediaStream | null>(null);
-const fullName = ref('');
-const connectionMode = ref('find');
-const peerId = ref('');
-const newGroupName = ref('');
-const invites = ref<any[]>([]);
+const successMsg = ref('');
+const showBiosModal = ref(false);
+const bootTimestamp = new Date();
 
-const startOnboarding = () => (onboardingStep.value = 1);
-
-const initCamera = async () => {
-  onboardingStep.value = 2;
-  try {
-    stream.value = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
-    if (videoFeed.value) videoFeed.value.srcObject = stream.value;
-  } catch (err) {
-    globalError.value = 'Camera Access Required';
-    onboardingStep.value = 1;
-  }
-};
-
-const captureAndSighting = async () => {
-  if (!videoFeed.value || !captureCanvas.value) return;
-  const context = captureCanvas.value.getContext('2d');
-  context?.drawImage(videoFeed.value, 0, 0, 600, 600);
-  const imageData = captureCanvas.value.toDataURL('image/jpeg');
-  stopCamera();
-  await performSighting(imageData);
-};
-
-const performSighting = async (imageData: string) => {
-  onboardingStep.value = 3;
-  const storage = getStorage();
-  const fileRef = storageRef(storage, `users/${user.value?.uid}/01.img`);
-  try {
-    await uploadString(fileRef, imageData, 'data_url');
-    setTimeout(() => {
-      onboardingStep.value = 4;
-    }, 2000);
-  } catch (error) {
-    onboardingStep.value = 1;
-  }
-};
-
-const groundIdentity = async () => {
-  if (!user.value?.uid) return;
-  try {
-    await updateDoc(doc(db, 'users', user.value.uid), {
-      fullName: fullName.value,
-      biometricVerified: true
-    });
-    onboardingStep.value = 5;
-  } catch (err) {
-    globalError.value = 'Identity grounding failed.';
-  }
-};
-
-const checkInvites = async () => {
-  connectionMode.value = 'invites';
-  if (!user.value?.uid) return;
-  const q = query(
-    collection(db, 'invites'),
-    where('toId', '==', user.value.uid),
-    where('status', '==', 'pending')
-  );
-  const snap = await getDocs(q);
-  invites.value = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-};
-
-const initiateHandshake = async () => {
-  if (newGroupName.value && user.value?.uid) {
-    const groupId = `GRP-${Math.random().toString(36).substring(7).toUpperCase()}`;
-    await setDoc(doc(db, 'groups', groupId), {
-      name: newGroupName.value,
-      owner: user.value.uid,
-      members: [user.value.uid],
-      memberNames: [fullName.value],
-      created: new Date()
-    });
-    await updateDoc(doc(db, 'users', user.value.uid), { myGroups: arrayUnion(groupId) });
-    alert(`Group Initialized: ${groupId}`);
-    newGroupName.value = '';
-  }
-};
-
-const acceptInvite = async (invite: any) => {
-  if (!user.value?.uid) return;
-  await updateDoc(doc(db, 'invites', invite.id), { status: 'accepted' });
-  const targetRef = doc(db, invite.type === 'group' ? 'groups' : 'users', invite.targetId);
-  await updateDoc(targetRef, {
-    members: arrayUnion(user.value.uid),
-    memberNames: arrayUnion(fullName.value)
-  });
-  checkInvites();
-};
-
-const completeOnboarding = () => {
-  onboardingStep.value = 0;
-  router.push('/peers');
-};
-
-const stopCamera = () => stream.value?.getTracks().forEach((t) => t.stop());
-const abortOnboarding = () => {
-  stopCamera();
-  onboardingStep.value = 0;
-};
-const logout = async () => {
-  await authLogout();
-  router.push('/');
-};
-
-onMounted(() => {
-  setTimeout(() => (showSplash.value = false), 3000);
-  const statsRef = doc(db, 'system', 'global_stats');
-  onSnapshot(statsRef, (docSnap) => {
-    if (docSnap.exists()) nodeCount.value = docSnap.data().totalNodes;
-  });
-  setTimeout(() => (isSynced.value = true), 1000);
+// Computed Location String for safety against missing DB fields
+const userLocationString = computed(() => {
+  if (!user.value?.ideals) return null;
+  const { city, county } = user.value.ideals;
+  if (city && county) return `${city}, ${county}`;
+  if (city) return city;
+  return null;
 });
 
-onUnmounted(() => stopCamera());
+// 01_SIGHTING_PROTOCOLS
+onMounted(() => {
+  // Listen for the router to finish its initial resolution before dropping splash
+  router.isReady().then(() => {
+    showSplash.value = false;
+    isSynced.value = true;
+    verifyTransitSequence(); // Safe execution after router init
+  });
+});
+
+// 02_IOD_TRANSIT_LOGIC
+const verifyTransitSequence = async () => {
+  // Use Vue Router's parsed query instead of window.location
+  const { token, PayerID, amt } = route.query;
+  
+  if ((token || PayerID) && user.value) {
+    successMsg.value = 'TRANSIT_VERIFIED: SYNCING_EQUITY_THREAD...';
+    
+    try {
+      const userRef = doc(db, 'users', user.value.uid);
+      await updateDoc(userRef, {
+        status: 'EQUITY_GROUNDED',
+        equityTier: amt || '1.00',
+        lastTransit: serverTimestamp(),
+      });
+      
+      // Clean up URL parameters silently
+      router.replace({ path: route.path, query: {} });
+
+      setTimeout(() => {
+        successMsg.value = 'EQUITY_STABILIZED: WELCOME_TO_THE_MESH';
+      }, 1500);
+      
+      setTimeout(() => {
+        successMsg.value = '';
+      }, 5000);
+    } catch (err) {
+      setError('TRANSIT_VERIFICATION_FAILED: Database synchronization error.');
+    }
+  }
+};
+
+// Re-evaluate transit if user logs in *after* landing on a payment return URL
+watch(user, (newUser) => {
+  if (newUser && Object.keys(route.query).length > 0) {
+    verifyTransitSequence();
+  }
+});
 </script>
 
-<style scoped>
-.home-page {
-  min-height: 100vh;
-  background: #000;
-  position: relative;
+<style>
+/* 16_THREAD_AESTHETIC */
+body {
+  background-color: #000;
+  color: #fff;
+  font-family: theme('fontFamily.terminal'), monospace;
   overflow-x: hidden;
 }
-.splash-screen {
+
+.iopic-substrate {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.tracking-widest {
+  letter-spacing: 0.25em;
+}
+
+.glass-navbar {
+  background: rgba(5, 5, 5, 0.85);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(0, 229, 255, 0.15);
+}
+
+.cursor-pointer {
+  cursor: pointer;
+}
+
+/* Animations */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.4s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+.status-pulse {
+  animation: iopic-pulse 2s infinite;
+}
+
+@keyframes iopic-pulse {
+  0%, 100% { opacity: 1; text-shadow: 0 0 5px rgba(255,193,7, 0.5); }
+  50% { opacity: 0.4; text-shadow: none; }
+}
+
+/* BIOS Overlay Substrate */
+.bios-modal-overlay {
   position: fixed;
   inset: 0;
-  background: url('/images/iopicworld.jpg') center/cover no-repeat;
-  z-index: 9999;
-  animation: fade-out 0.5s ease-in-out 2.5s forwards;
+  background-color: rgba(0, 0, 0, 0.9);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1050;
+  backdrop-filter: blur(8px);
 }
-@keyframes fade-out {
-  from {
-    opacity: 1;
-  }
-  to {
-    opacity: 0;
-    pointer-events: none;
+
+.bios-modal-content {
+  background-color: #050505;
+  border: 1px solid #00e5ff;
+  border-radius: 4px;
+  padding: 25px;
+  position: relative;
+  max-width: 850px;
+  width: 95%;
+  box-shadow: 0 0 40px rgba(0, 229, 255, 0.1);
+  overflow-y: auto;
+  max-height: 90vh;
+}
+
+.bios-modal-close-button {
+  position: absolute;
+  top: 15px;
+  right: 20px;
+  background: none;
+  border: none;
+  color: #00e5ff;
+  font-size: 1.2em;
+  transition: all 0.2s ease;
+}
+.bios-modal-close-button:hover {
+  color: #fff;
+  text-shadow: 0 0 10px #00e5ff;
+}
+
+@media (min-width: 768px) {
+  .bios-modal-content {
+    padding: 40px;
   }
 }
 </style>

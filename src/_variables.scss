@@ -1,13 +1,30 @@
-$card-shadow-blue: 0 2px 8px 0 rgba(0, 191, 255, 0.15); // Example blue shadow
 // Global SCSS Variables (Dart Sass module compatible)
 
-// CoreUI / Bootstrap Variable Overrides
-$primary: #00ff41; // Iopic/Matrix Green
-$secondary: #00bfff; // Digital Blue
-$warning: #ffc107; // Standard warning yellow
-$body-bg: #000000; // Deep black background
-$body-color: #ffffff; // White text by default
+// 1. Define CSS Custom Properties with default values (Symmetry/Cyan theme)
+:root {
+  --io-primary: #00ff41; // Matrix Green
+  --io-secondary: #00e5ff; // Symmetry Cyan
+  --io-bg: #000000;
+  --io-text: #ffffff;
+  --io-accent: #7fff00; // Lime velocity
+  --card-shadow: 0 2px 8px 0 rgba(0, 229, 255, 0.15);
+}
+
+// 2. Define Theme Overrides (Entropy/Logic theme)
+[data-theme='entropy'] {
+  --io-primary: #ff0041; // Entropy Red
+  --io-secondary: #ffd700; // Logic Gold
+  --io-bg: #0a0a0a;
+  --card-shadow: 0 2px 8px 0 rgba(255, 0, 65, 0.2);
+}
+
+// 3. Map SCSS variables to CSS variables
+$primary: var(--io-primary);
+$secondary: var(--io-secondary);
+$body-bg: var(--io-bg);
+$body-color: var(--io-text);
 $font-family-sans-serif: 'Share Tech Mono', monospace, sans-serif;
+$card-shadow-blue: var(--card-shadow);
 
 // Protocol Variables (Required by src/style.scss)
 $protocol-blue: $secondary;

@@ -1,0 +1,79 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: {userId}
+    // Fields:
+    //   - iowb: map { balance: number, isGrounded: bool }
+    //   - role: string (optional: 'AUDITOR', 'NODE')
+    //   - ledger: map { last_reallocation_sync: timestamp, ... }
+    //
+    // Collection: registry
+    // Document ID: global_mesh_wallet
+    // Fields:
+    //   - caretaker_mutuality_pool: number
+    //   - last_updated: timestamp
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Check if the node has been granted Auditor privileges
+    function isAuditor() {
+      return isAuthenticated() && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'AUDITOR';
+    }
+
+    // ===============================================================
+    // Registry: Caretaker Mutuality Pool
+    // ===============================================================
+
+    match /registry/global_mesh_wallet {
+      // Only specific Auditor nodes or the system itself can sight the global equity pool.
+      // This ensures the Caretaker Mutuality model remains transparent but secure.
+      allow read: if isAuditor();
+
+      // CRITICAL: Prevent manual tampering with the Caretaker Pool.
+      // Client-side writes are forbidden. Modifications are strictly reserved 
+      // for the Settlement Layer via Admin SDK (handleStripeWebhook).
+      allow write: if false;
+    }
+
+    // ===============================================================
+    // Users: Sovereign Nodes
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+
+      // Prevent users from manually inflating balance, grounding status, or granting themselves roles.
+      allow create: if isOwner(userId) 
+        && request.resource.data.iowb.balance == 0
+        && (!('role' in request.resource.data) || request.resource.data.role == 'NODE');
+      
+      allow update: if isOwner(userId)
+        && !request.resource.data.iowb.diff(resource.data.iowb).affectedKeys().hasAny(['balance', 'isGrounded'])
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']));
+    }
+
+    // General fallback: Deny anything not explicitly allowed
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

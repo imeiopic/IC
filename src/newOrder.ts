@@ -1,5 +1,5 @@
-import { serverTimestamp, doc, setDoc } from "firebase/firestore";
-import { db } from "./firebase-config";
+import { serverTimestamp, doc, setDoc } from 'firebase/firestore';
+import { db } from '@/firebase'; // Standardized to firebase.ts
 
 export interface NewOrder {
   origin_thread: string;
@@ -11,16 +11,16 @@ export interface NewOrder {
 }
 
 export const newOrder: NewOrder = {
-  origin_thread: "1000",
-  creator_id: "User_A_0110",
-  rational_choice: "1001_COMMERCE", // The choice made in the menu
-  target_id: "User_B_0110", // The "Pair" in the VR^2 equation
-  order_status: "PENDING_LOGIC",
+  origin_thread: '1000',
+  creator_id: 'Member_A_0110',
+  rational_choice: '1001_COMMERCE', // The choice made in the menu
+  target_id: 'Member_B_0110', // The "Pair" in the VR^2 equation
+  order_status: 'PENDING_LOGIC',
   timestamp: serverTimestamp()
 };
 
 export const saveNewOrder = async (orderId: string, order: NewOrder) => {
-  const ref = doc(db, "1000_ordertaker", orderId);
+  const ref = doc(db, '1000_ordertaker', orderId);
   await setDoc(ref, order);
-  console.log("New order saved to Firestore.");
+  console.log('New order saved to Firestore.');
 };

@@ -1,0 +1,15 @@
+{
+  "projects": {
+    "default": "iopic-vre"
+  },
+  "targets": {
+    "iopic-vre": {
+      "storage": {
+        "default": [
+          "iopic-vre.firebasestorage.app"
+        ]
+      }
+    }
+  },
+  "etags": {}
+}

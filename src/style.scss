@@ -1,0 +1,8 @@
+@use './_variables.scss' as *;
+@use '@coreui/coreui/scss/coreui' as *;
+
+// Your custom global styles go here (after variables and CoreUI)
+body {
+  background-color: $protocol-dark;
+  color: $protocol-green;
+}

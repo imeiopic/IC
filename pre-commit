@@ -1,0 +1,16 @@
+#!/usr/bin/env sh
+
+# ARC-LOGIC-019: Substrate Leak Prevention
+# Identifies staged files that match forbidden patterns (.env, ssl/, and secrets)
+FORBIDDEN_FILES=$(git diff --cached --name-only | grep -E '\.env|^ssl/|.*\.json' | grep -v 'package.json')
+
+if [ -n "$FORBIDDEN_FILES" ]; then
+  echo "----------------------------------------------------------------"
+  echo "SECURITY BREACH: Sensitive files detected in staging area."
+  echo "Forbidden Files: $FORBIDDEN_FILES"
+  echo "Abort: Use 'git rm --cached <file>' to remove them from the index."
+  echo "----------------------------------------------------------------"
+  exit 1
+fi
+
+npx lint-staged

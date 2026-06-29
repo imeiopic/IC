@@ -12,8 +12,8 @@ export const entityIDEALRange: EntityIDEALRange = {
   protocol: "LOGIC"
 };
 
-import { doc, setDoc } from "firebase/firestore";
-import { db } from "./firebase-config";
+import { doc, setDoc } from 'firebase/firestore';
+import { db } from '@/firebase'; // Standardized to firebase.ts
 
 export const saveEntityIDEALRange = async (entityId: string, range: EntityIDEALRange) => {
   const ref = doc(db, "1101_earth_logic", entityId);
@@ -22,18 +22,18 @@ export const saveEntityIDEALRange = async (entityId: string, range: EntityIDEALR
 };
 
 // Client-side detection logic example
-export function isWithinRadius(userPos: { lat: number; lng: number }, entityPos: { lat: number; lng: number }, radius: number): boolean {
+export function isWithinRadius(memberPos: { lat: number; lng: number }, entityPos: { lat: number; lng: number }, radius: number): boolean {
   const toRad = (x: number) => x * Math.PI / 180;
   const R = 6371000; // Earth radius in meters
-  const dLat = toRad(entityPos.lat - userPos.lat);
-  const dLng = toRad(entityPos.lng - userPos.lng);
-  const a = Math.sin(dLat/2) ** 2 + Math.cos(toRad(userPos.lat)) * Math.cos(toRad(entityPos.lat)) * Math.sin(dLng/2) ** 2;
+  const dLat = toRad(entityPos.lat - memberPos.lat);
+  const dLng = toRad(entityPos.lng - memberPos.lng);
+  const a = Math.sin(dLat/2) ** 2 + Math.cos(toRad(memberPos.lat)) * Math.cos(toRad(entityPos.lat)) * Math.sin(dLng/2) ** 2;
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
   const distance = R * c;
   return distance < radius;
 }
 
 // Usage:
-// if (isWithinRadius(userPos, entityIDEALRange.center, entityIDEALRange.radius_meters)) {
+// if (isWithinRadius(memberPos, entityIDEALRange.center, entityIDEALRange.radius_meters)) {
 //   triggerOrderTaker(); // Proximity Connect!
 // }

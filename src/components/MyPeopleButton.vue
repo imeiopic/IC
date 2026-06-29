@@ -1,18 +1,16 @@
-
 <template>
   <button class="img-btn" @click="$emit('click')">
-    <img :src="imgSrc" alt="My People" />
-    <span>My People</span>
+    <img :src="imgSrc" alt="People" />
+    <span>People</span>
   </button>
 </template>
 
 <script setup lang="ts">
 // @ts-ignore
-import imgSrc from '../assets/images/mypeople.png'
+import imgSrc from '@assets/images/mypeople.png';
 </script>
 
-
-<style scoped>
+<style lang="scss" scoped>
 .img-btn {
   display: flex;
   flex-direction: column;
@@ -27,7 +25,7 @@ import imgSrc from '../assets/images/mypeople.png'
   object-fit: contain;
   margin-bottom: 0.5rem;
   border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 .img-btn span {
   font-size: 1rem;

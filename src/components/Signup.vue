@@ -1,6 +1,7 @@
 <template>
   <div class="signup-container">
-    <img src="../assets/images/iologo.png" alt="IOPIC Logo" style="display:block;margin:0 auto 1.5rem auto;width:90px;" />
+    <img src="../assets/images/iologo.png" alt="IOPIC Logo"
+      style="display:block;margin:0 auto 1.5rem auto;width:90px;" />
     <h2>Sign Up</h2>
     <form @submit.prevent="signup">
       <div>
@@ -38,7 +39,8 @@ const googleSignup = async () => {
   }
 }
 import { createInstance } from '../createInstance'
-import app from '../firebase.js'
+import { toMember } from '../memberModel';
+import { app, db } from '../firebase-config'; // Import app and db from firebase-config
 
 const email = ref('')
 const password = ref('')
@@ -46,26 +48,27 @@ const error = ref('')
 const success = ref('')
 const loading = ref(false)
 
-// Helper: Register user via Firebase
+// Helper: Register member via Firebase
 async function registerViaFirebase(email: string, password: string) {
   const auth = getAuth(app)
   return await createUserWithEmailAndPassword(auth, email, password)
 }
 
-// Onboarding logic: Initiate user genesis
-async function initiateUserGenesis(email: string, password: string, lat: number, lon: number) {
+// Onboarding logic: Initiate member genesis
+async function initiateMemberGenesis(email: string, password: string, lat: number, lon: number) {
   // 1. Authenticate (The Internet I)
-  const userCredential = await registerViaFirebase(email, password)
+  const memberCredential = await registerViaFirebase(email, password)
+  const member = toMember(memberCredential.user)
   // 2. Define the Instance (The People P)
   await createInstance(
-    userCredential.user.uid,
+    member.id,
     {
       x: lat,
       y: lon,
       z: 0 // Surface of Earth
     }
   )
-  console.log("iiii = ! : The User has entered the Fabric.")
+  console.log("iiii = ! : The Member has entered the Fabric.")
 }
 
 const signup = async () => {
@@ -80,7 +83,7 @@ const signup = async () => {
   }
   navigator.geolocation.getCurrentPosition(async (position) => {
     try {
-      await initiateUserGenesis(
+      await initiateMemberGenesis(
         email.value,
         password.value,
         position.coords.latitude,
@@ -109,18 +112,22 @@ const signup = async () => {
   background: #fff url('../assets/entertheworld.png') no-repeat center center;
   background-size: cover;
 }
+
 .error {
   color: red;
   margin-top: 1rem;
 }
+
 .success {
   color: green;
   margin-top: 1rem;
 }
+
 .loading {
   color: #007bff;
   margin-top: 1rem;
 }
+
 .google-btn {
   width: 100%;
   padding: 0.75rem;
